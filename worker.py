@@ -27,20 +27,20 @@ import config
 import db
 import utils
 
-from shared import MalformedResponse, CaptchaException, AccountManager, Spawns, DatabaseProcessor, get_captchas, get_extras, get_workers, mgr_init, parse_args, configure_logger, exception_handler, load_accounts, check_captcha, DOWNLOAD_HASH, BAD_STATUSES
+from shared import *
 
 
 # Check whether config has all necessary attributes
-REQUIRED_SETTINGS = (
+_required = (
     'DB_ENGINE',
     'GRID'
 )
-for setting_name in REQUIRED_SETTINGS:
+for setting_name in _required:
     if not hasattr(config, setting_name):
         raise RuntimeError('Please set "{}" in config'.format(setting_name))
 
 # Set defaults for missing config options
-OPTIONAL_SETTINGS = {
+_optional = {
     'PROXIES': None,
     'SCAN_DELAY': 11,
     'NOTIFY_IDS': None,
@@ -55,9 +55,10 @@ OPTIONAL_SETTINGS = {
     'NOTIFY': False,
     'AUTHKEY': b'm3wtw0',
     'COMPUTE_THREADS': round((config.GRID[0] * config.GRID[1]) / 4) + 1,
-    'NETWORK_THREADS': round((config.GRID[0] * config.GRID[1]) / 10) + 1
+    'NETWORK_THREADS': round((config.GRID[0] * config.GRID[1]) / 10) + 1,
+    'SPIN_POKESTOPS': False
 }
-for setting_name, default in OPTIONAL_SETTINGS.items():
+for setting_name, default in _optional.items():
     if not hasattr(config, setting_name):
         setattr(config, setting_name, default)
 
@@ -145,6 +146,7 @@ class Slave:
                 self.ever_authenticated = True
 
     async def call_chain(self, request):
+        global DOWNLOAD_HASH
         request.check_challenge()
         request.get_hatched_eggs()
         if self.inventory_timestamp:
@@ -158,12 +160,16 @@ class Slave:
         response = await self.loop.run_in_executor(
             self.network_executor, request.call
         )
+        self.last_visit = time.time()
         try:
             if response.get('status_code') == 3:
                 logger.warning(self.username + ' is banned.')
                 raise pgoapi_exceptions.BannedAccountException
             responses = response.get('responses')
-            self.get_inventory_timestamp(responses)
+            timestamp = responses.get('GET_INVENTORY', {}).get('inventory_delta', {}).get('new_timestamp_ms')
+            self.inventory_timestamp = timestamp or self.inventory_timestamp
+            download_hash = responses.get('DOWNLOAD_SETTINGS', {}).get('hash')
+            DOWNLOAD_HASH = download_hash or DOWNLOAD_HASH
             check_captcha(responses)
         except AttributeError:
             raise MalformedResponse
@@ -273,7 +279,6 @@ class Slave:
                                     player_longitude=self.location[1])
 
         responses = await self.call_chain(request)
-        self.last_visit = time.time()
 
         response = responses.get('ENCOUNTER', {})
         pokemon_data = response.get('wild_pokemon', {}).get('pokemon_data', {})
@@ -287,6 +292,38 @@ class Slave:
                 'capture_probability', {}).get('capture_probability')
         self.error_code = '!'
         return pokemon_data
+
+    async def spin_pokestop(self, pokestop):
+        pokestop_location = pokestop['lat'], pokestop['lon']
+        distance = great_circle(self.location, pokestop_location).meters
+        if distance > 40:
+            return False
+
+        await utils.random_sleep(.6, 1.2, .75)
+
+        request = self.api.create_request()
+        request.fort_details(fort_id = pokestop['external_id'],
+                             latitude = pokestop['lat'],
+                             longitude = pokestop['lon'])
+        responses = await self.call_chain(request)
+        name = responses.get('FORT_DETAILS', {}).get('name')
+
+        await utils.random_sleep(.6, 1.2, .75)
+
+        request = self.api.create_request()
+        request.fort_search(fort_id = pokestop['external_id'],
+                            player_latitude = self.location[0],
+                            player_longitude = self.location[1],
+                            fort_latitude = pokestop['lat'],
+                            fort_longitude = pokestop['lon'])
+        responses = await self.call_chain(request)
+
+        result = responses.get('FORT_SEARCH', {}).get('result')
+        if result == 1:
+            self.logger.info('Spun {n}: {r}'.format(n=name, r=result))
+        else:
+            self.logger.warning('Failed spinning {n}: {r}'.format(n=name, r=result))
+        return responses
 
     def swap_proxy(self, reason=''):
         self.set_proxy(random.choice(config.PROXIES))
@@ -312,13 +349,6 @@ class Slave:
             self.logger.info('Skipped changing circuit on {p} because it was '
                              'changed {s} seconds ago.'.format(
                                  p=self.proxy, s=time_passed))
-
-    def get_inventory_timestamp(self, responses):
-        timestamp = responses.get('GET_INVENTORY', {}).get('inventory_delta', {}).get('new_timestamp_ms')
-        if timestamp:
-            self.inventory_timestamp = timestamp
-        elif not self.timestamp:
-            self.inventory_timestamp = (time.time() - 2) * 1000
 
     async def app_simulation_login(self):
         self.error_code = 'APP SIMULATION'
@@ -357,9 +387,10 @@ class Slave:
 
         await utils.random_sleep(1, 1.5, 1.356)
 
+        version = 4901
         # request 2: download_remote_config_version
         request = self.api.create_request()
-        request.download_remote_config_version(platform=1, app_version=4500)
+        request.download_remote_config_version(platform=1, app_version=version)
         request.check_challenge()
         request.get_hatched_eggs()
         request.get_inventory()
@@ -372,7 +403,8 @@ class Slave:
 
         responses = response.get('responses', {})
         check_captcha(responses)
-        self.get_inventory_timestamp(responses)
+        timestamp = responses.get('GET_INVENTORY', {}).get('inventory_delta', {}).get('new_timestamp_ms')
+        self.inventory_timestamp = timestamp or self.inventory_timestamp
 
         download_hash = responses.get('DOWNLOAD_SETTINGS', {}).get('hash')
         if download_hash:
@@ -391,7 +423,7 @@ class Slave:
 
         # request 3: get_asset_digest
         request = self.api.create_request()
-        request.get_asset_digest(platform=1, app_version=4701)
+        request.get_asset_digest(platform=1, app_version=version)
         request.check_challenge()
         request.get_hatched_eggs()
         request.get_inventory(last_timestamp_ms=self.inventory_timestamp)
@@ -402,25 +434,52 @@ class Slave:
             self.network_executor, request.call
         )
 
-        self.get_inventory_timestamp(response.get('responses', {}))
+        timestamp = response.get('responses', {}).get('GET_INVENTORY', {}).get('inventory_delta', {}).get('new_timestamp_ms')
+        self.inventory_timestamp = timestamp or self.inventory_timestamp
         await utils.random_sleep(1, 2, 1.709)
 
+        lat, lon = self.location[0:2]
         # request 4: get_player_profile
         request = self.api.create_request()
         request.get_player_profile()
+        request.check_challenge()
+        request.get_hatched_eggs()
+        request.get_inventory(last_timestamp_ms=self.inventory_timestamp)
+        request.check_awarded_badges()
+        request.download_settings(hash=DOWNLOAD_HASH)
+        request.get_incense_pokemon(player_latitude=lat, player_longitude=lon)
+        request.get_buddy_walked()
 
-        responses = await self.call_chain(request)
+        response = await self.loop.run_in_executor(
+            self.network_executor, request.call
+        )
+
+        timestamp = response.get('responses', {}).get('GET_INVENTORY', {}).get('inventory_delta', {}).get('new_timestamp_ms')
+        self.inventory_timestamp = timestamp or self.inventory_timestamp
+
         await utils.random_sleep(1, 1.5, 1.326)
 
         # requst 5: level_up_rewards
         request = self.api.create_request()
         request.level_up_rewards(level=player_level)
+        request.check_challenge()
+        request.get_hatched_eggs()
+        request.get_inventory(last_timestamp_ms=self.inventory_timestamp)
+        request.check_awarded_badges()
+        request.download_settings(hash=DOWNLOAD_HASH)
+        request.get_incense_pokemon(player_latitude=lat, player_longitude=lon)
+        request.get_buddy_walked()
 
-        responses = await self.call_chain(request)
+        response = await self.loop.run_in_executor(
+            self.network_executor, request.call
+        )
+
+        timestamp = response.get('responses', {}).get('GET_INVENTORY', {}).get('inventory_delta', {}).get('new_timestamp_ms')
+        self.inventory_timestamp = timestamp or self.inventory_timestamp
         await utils.random_sleep(1, 1.5, 1.184)
 
         self.logger.info('Finished RPC login sequence (iOS app simulation)')
-        return responses
+        return response
 
     async def login(self):
         """Logs worker in and prepares for scanning"""
@@ -556,13 +615,10 @@ class Slave:
                                 longitude=pgoapi_utils.f2i(longitude))
 
         responses = await self.call_chain(request)
-        self.last_visit = time.time()
 
         map_objects = responses.get('GET_MAP_OBJECTS', {})
         pokemons = []
-        ls_seen = []
         forts = []
-        pokemon_seen = 0
         sent_notification = False
 
         if map_objects.get('status') != 1:
@@ -578,7 +634,6 @@ class Slave:
             request_time_ms = map_cell['current_timestamp_ms']
             for pokemon in map_cell.get('wild_pokemons', []):
                 pokemon_data = None
-                pokemon_seen += 1
                 # Accurate times only provided in the last 90 seconds
                 invalid_tth = (
                     pokemon['time_till_hidden_ms'] < 0 or
@@ -601,45 +656,44 @@ class Slave:
                 else:
                     normalized['valid'] = True
 
-                if (config.NOTIFY and
-                        normalized['pokemon_id'] in config.NOTIFY_IDS):
-                    if config.ENCOUNTER in ('all', 'notifying'):
-                        normalized.update(await self.encounter(pokemon))
-                    self.error_code = '*'
-                    notified, explanation = notifier.notify(normalized)
-                    if notified:
-                        sent_notification = True
-                        self.logger.info(explanation)
-                        global NOTIFICATIONS_SENT
-                        NOTIFICATIONS_SENT += 1
-                    else:
-                        self.logger.warning(explanation)
+                normalized = await self.notify(normalized, pokemon)
 
-                if normalized['valid'] and normalized not in db.SIGHTING_CACHE:
-                    if config.ENCOUNTER == 'all':
-                        normalized.update(await self.encounter(pokemon))
+                if normalized['valid']:
+                    if (config.ENCOUNTER == 'all'
+                            and 'individual_attack' not in normalized
+                            and normalized not in db.SIGHTING_CACHE):
+                        try:
+                            normalized.update(await self.encounter(pokemon))
+                        except Exception:
+                            self.logger.warning('Exception during encounter.')
                     pokemons.append(normalized)
 
                 if not normalized[
                         'valid'] or db.LONGSPAWN_CACHE.in_store(normalized):
-                    normalized = normalized.copy()
-                    normalized['type'] = 'longspawn'
-                    ls_seen.append(normalized)
+                    long_normal = normalized.copy()
+                    long_normal['type'] = 'longspawn'
+                    pokemons.append(long_normal)
             for fort in map_cell.get('forts', []):
                 if not fort.get('enabled'):
                     continue
                 if fort.get('type') == 1:  # pokestops
-                    continue
-                forts.append(utils.normalize_fort(fort))
+                    if 'lure_info' in fort:
+                        norm = utils.normalize_lured(fort, request_time_ms)
+                        pokemons.append(norm)
+                    pokestop = utils.normalize_pokestop(fort)
+                    forts.append(pokestop)
+                    if config.SPIN_POKESTOPS:
+                        cooldown = fort.get('cooldown_complete_timestamp_ms', 0)
+                        if not cooldown or time.time() > cooldown / 1000:
+                            await self.spin_pokestop(pokestop)
+                else:
+                    forts.append(utils.normalize_gym(fort))
 
-        if pokemons:
-            self.db_processor.add(pokemons)
-        if forts:
-            self.db_processor.add(forts)
-        if ls_seen:
-            self.db_processor.add(ls_seen)
+        self.db_processor.add(forts)
+        pokemon_seen = len(pokemons)
 
         if pokemon_seen > 0:
+            self.db_processor.add(pokemons)
             self.error_code = ':'
             self.total_seen += pokemon_seen
             GLOBAL_SEEN += pokemon_seen
@@ -671,6 +725,22 @@ class Slave:
         )
         self.update_accounts_dict()
         return True
+
+    async def notify(self, normalized, pokemon):
+        if config.NOTIFY and normalized['pokemon_id'] in config.NOTIFY_IDS:
+            if config.ENCOUNTER in ('all', 'notifying'):
+                normalized.update(await self.encounter(pokemon))
+            self.error_code = '*'
+            notified, explanation = notifier.notify(normalized)
+            if notified:
+                sent_notification = True
+                self.logger.info(explanation)
+                global NOTIFICATIONS_SENT
+                NOTIFICATIONS_SENT += 1
+            else:
+                self.error_code = '!'
+                self.logger.warning(explanation)
+        return normalized
 
     def travel_speed(self, point, spawn_time):
         if self.busy or self.killed:
@@ -1112,6 +1182,7 @@ if __name__ == '__main__':
     GLOBAL_SEEN = 0
     CAPTCHAS = 0
     NOTIFICATIONS_SENT = 0
+    DOWNLOAD_HASH = "d3da400db60abf79ea05abc38e2396f0bbd453f9"
 
     try:
         makedirs('pickles')
