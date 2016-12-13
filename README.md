@@ -9,7 +9,7 @@ A Pokémon Go scraper capable of scanning large areas for Pokémon spawns over l
 
 `worker.py` uses a database table of spawnpoints and expiration times to visit each point ~30 minutes before each Pokemon despawns. For each point it determines which eligible worker can reach the point with the lowest speed, or tries again if all workers would be over the configurable speed limit. This method scans very efficiently and finds Pokemon very soon after they spawn, and also leads to unpredictable account movements that look less robotic. The spawnpoint database continually expands as it discovers Pokemon with accurate expiration times. If you don't have enough accounts to keep up with the number of spawns in your database, it will automatically skip points that are unreachable within the speed limit or points that it has already seen spawn that cycle from other nearby points.
 
-Most of my development effort goes into `worker.py`, it works better and has more features. For users that do not currently have a spawnpoint database, there is `wander.py` which works the same was as the old pokeminer. You can use `wander.py` to get started and build up your spawnpoint database, but I highly recommend switching to `worker.py` as soon as you have enough spawnpoints to keep your accounts busy.
+Most of my development effort goes into `worker.py`, it works better and has more features. For users that do not currently have a spawnpoint database, there is `wander.py` which works the same way as the old pokeminer. You can use `wander.py` to get started and build up your spawnpoint database, but I highly recommend switching to `worker.py` as soon as you have enough spawnpoints to keep your accounts busy.
 
 `wander.py` gets a rectangle from start/end coordinates (configured in `config.py`) and spawns *n* workers. Each of the workers use different accounts to scan their surrounding areas for Pokemon. To put it simply: **you can scan an entire city for Pokemon**. All gathered information is put into a database for further analysis. It logs in again after *X* scans just to make sure the connection with the server is in a good state. It's also capable of restarting workers that are misbehaving, so that the data-gathering process is uninterrupted.
 
@@ -23,14 +23,14 @@ Here it is in action:
 
 ## Features
 
-- spawnpoint scanning with worker
-- hexagonal scanning with wander
 - accurate timestamp information whenever possible with historical data
 - Twitter and PushBullet notifications
   - references nearest landmark from your own list
 - IV/moves detection, storage, and notification
   - produces nice image of Pokémon with stats for Twitter
 - stores Pokémon, gyms, and pokestops in database
+- spawnpoint scanning with `worker`
+- hexagonal scanning with `wander`
 - automatic account swapping for CAPTCHAs and other problems
 - pickle storage to improve speed and reduce database queries
 - manual CAPTCHA solving that instantly puts accounts back in rotation
@@ -47,12 +47,12 @@ Here it is in action:
 3. Copy `config.example.py` to `config.py` and customize it with your account, location, database information, and any other relevant settings. The comments in the config example provide some information about the options.
 4. `pip3 install -r requirements.txt`
   * Optionally `pip3 install` additional packages listed in optional-requirements
-    * pushbullet.py is required for pushbullet notifications
-    * python-twitter is required for twitter notifications
-    * stem is required for proxy circuit swapping
-    * shapely is required for landmarks or spawnpoint scan boundaries
-    * selenium (and [ChromeDriver(https://sites.google.com/a/chromium.org/chromedriver/)) is required for solving CAPTCHAs
-    * pycairo is required for generating IV/move images for tweets
+    * *pushbullet.py* is required for pushbullet notifications
+    * *python-twitter* is required for twitter notifications
+    * *stem* is required for proxy circuit swapping
+    * *shapely* is required for landmarks or spawnpoint scan boundaries
+    * *selenium* (and [ChromeDriver](https://sites.google.com/a/chromium.org/chromedriver/)) are required for solving CAPTCHAs
+    * *pycairo* is required for generating IV/move images
 5. Run `python3` from the command line
   1. Input `import db`
   2. then `db.Base.metadata.create_all(db.get_engine())`
