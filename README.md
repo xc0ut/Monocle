@@ -56,7 +56,7 @@ Since it uses [Leaflet](http://leafletjs.com/) for mapping, the appearance and d
     * *pycairo* is required for generating IV/move images
     * *mysqlclient* is required for using a MySQL database
     * *psycopg2* is required for using a PostgreSQL database
-    * *requests* is required for using webhooks
+    * *requests* is required for using webhooks or 2Captcha
 5. Run `python3` from the command line
   1. Input `import db`
   2. then `db.Base.metadata.create_all(db.get_engine())`

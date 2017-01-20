@@ -930,13 +930,13 @@ class Worker:
         captcha_id = str(response.split('|')[1])
 
         try:
-            # Get the response, retry every 5 seconds if its not ready
+            # Get the response, retry every 5 seconds if it's not ready
             while True:
                 recaptcha_response = self.session.get("http://2captcha.com/res.php?key={}&action=get&id={}"
-                        .format(config.CAPTCHA_KEY, captcha_id), timeout=5).text
+                        .format(config.CAPTCHA_KEY, captcha_id), timeout=20).text
                 if 'CAPCHA_NOT_READY' not in recaptcha_response:
                     break
-                sleep(5)
+                await sleep(5)
         except Exception as e:
             self.logger.error('Got an error while trying to solve CAPTCHA. '
                               'Check your API Key and account balance.')
