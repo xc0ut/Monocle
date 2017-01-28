@@ -1,36 +1,41 @@
+#!/usr/bin/env python3
+
 from datetime import datetime
+from pkg_resources import resource_filename
+
 import argparse
 import json
 
 from flask import Flask, request, render_template, jsonify
-from multiprocessing.managers import BaseManager
+from multiprocessing.managers import BaseManager, RemoteError
 
-import config
-import db
-import utils
-from names import POKEMON_NAMES
+from pokeminer import config
+from pokeminer import db
+from pokeminer import utils
+from pokeminer.names import POKEMON_NAMES
 
 
 # Check whether config has all necessary attributes
-_required = (
-    'AREA_NAME',
-    'GOOGLE_MAPS_KEY'
-)
-for setting_name in _required:
-    if not hasattr(config, setting_name):
-        raise RuntimeError('Please set "{}" in config'.format(setting_name))
+if not hasattr(config, 'AREA_NAME'):
+    raise RuntimeError('Please set AREA_NAME in config'.format(setting_name))
 # Set defaults for missing config options
 _optional = {
+    'GOOGLE_MAPS_KEY': None,
+    'RARE_IDS': (),
     'TRASH_IDS': (),
     'MAP_PROVIDER_URL': '//{s}.tile.osm.org/{z}/{x}/{y}.png',
     'MAP_PROVIDER_ATTRIBUTION': '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
     'MAP_WORKERS': True,
-    'AUTHKEY': b'm3wtw0'
+    'AUTHKEY': b'm3wtw0',
+    'REPORT_MAPS': True
 }
 for setting_name, default in _optional.items():
     if not hasattr(config, setting_name):
         setattr(config, setting_name, default)
-del (_required, _optional)
+del _optional
+
+if not config.REPORT_MAPS:
+    config.GOOGLE_MAPS_KEY = None
 
 
 def get_args():
@@ -55,11 +60,12 @@ def get_args():
     return parser.parse_args()
 
 
-app = Flask(__name__, template_folder='templates')
+app = Flask(__name__, template_folder=resource_filename('pokeminer', 'templates'), static_folder=resource_filename('pokeminer', 'static'))
+
 
 @app.route('/')
 def fullmap():
-    map_center = utils.get_map_center()
+    map_center = utils.MAP_CENTER
     return render_template(
         'newmap.html',
         area_name=config.AREA_NAME,
@@ -84,13 +90,15 @@ def get_pokestops():
 def get_scan_coords():
     return jsonify(get_scan_coords())
 
-class AccountManager(BaseManager): pass
-AccountManager.register('worker_dict')
-manager = AccountManager(address=utils.get_address(), authkey=config.AUTHKEY)
-manager.connect()
-worker_dict = manager.worker_dict()
+@app.route('/static/<path:path>')
+def send_static(path):
+    return send_from_directory(path)
+
 
 if config.MAP_WORKERS:
+    class AccountManager(BaseManager): pass
+    AccountManager.register('worker_dict')
+
     def manager_connect():
         global worker_dict
         global manager
@@ -98,9 +106,11 @@ if config.MAP_WORKERS:
             manager = AccountManager(address=utils.get_address(), authkey=config.AUTHKEY)
             manager.connect()
             worker_dict = manager.worker_dict()
-        except (FileNotFoundError, AttributeError):
+        except (FileNotFoundError, AttributeError, RemoteError, ConnectionRefusedError):
             print('Unable to connect to manager for worker data.')
             worker_dict = {}
+
+    manager_connect()
 
     @app.route('/workers_data')
     def workers_data():
@@ -109,7 +119,7 @@ if config.MAP_WORKERS:
 
     @app.route('/workers')
     def workers_map():
-        map_center = utils.get_map_center()
+        map_center = utils.MAP_CENTER
         return render_template(
             'workersmap.html',
             area_name=config.AREA_NAME,
@@ -149,6 +159,7 @@ if config.MAP_WORKERS:
                 'sent_notification': sent_notification
             })
         return markers
+
 
 def get_pokemarkers():
     markers = []
@@ -248,12 +259,16 @@ def get_scan_coords():
 @app.route('/report')
 def report_main():
     session = db.Session(autoflush=False)
-    top_pokemon = db.get_top_pokemon(session)
-    bottom_pokemon = db.get_top_pokemon(session, order='ASC')
-    bottom_sightings = db.get_all_sightings(
-        session, [r[0] for r in bottom_pokemon]
-    )
-    rare_pokemon = db.get_rare_pokemon(session)
+    counts = db.get_sightings_per_pokemon(session)
+    session_stats = db.get_session_stats(session)
+    session.close()
+    count = sum(counts.values())
+    counts_tuple = tuple(counts.items())
+    top_pokemon = list(counts_tuple[-30:])
+    top_pokemon.reverse()
+    bottom_pokemon = counts_tuple[:30]
+    nonexistent = [(x, POKEMON_NAMES[x]) for x in range(1, 152) if x not in counts]
+    rare_pokemon = [r for r in counts_tuple if r[0] in config.RARE_IDS]
     if rare_pokemon:
         rare_sightings = db.get_all_sightings(
             session, [r[0] for r in rare_pokemon]
@@ -272,23 +287,17 @@ def report_main():
             ],
         },
         'maps_data': {
-            'bottom30': [sighting_to_marker(s) for s in bottom_sightings],
             'rare': [sighting_to_marker(s) for s in rare_sightings],
         },
-        'map_center': utils.get_map_center(),
+        'map_center': utils.MAP_CENTER,
         'zoom': 13,
     }
     icons = {
         'top30': [(r[0], POKEMON_NAMES[r[0]]) for r in top_pokemon],
         'bottom30': [(r[0], POKEMON_NAMES[r[0]]) for r in bottom_pokemon],
         'rare': [(r[0], POKEMON_NAMES[r[0]]) for r in rare_pokemon],
-        'nonexistent': [
-            (r, POKEMON_NAMES[r])
-            for r in db.get_nonexistent_pokemon(session)
-        ]
+        'nonexistent': nonexistent
     }
-    session_stats = db.get_session_stats(session)
-    session.close()
 
     area = utils.get_scan_area()
 
@@ -297,11 +306,11 @@ def report_main():
         current_date=datetime.now(),
         area_name=config.AREA_NAME,
         area_size=area,
-        total_spawn_count=session_stats['count'],
-        spawns_per_hour=session_stats['per_hour'],
+        total_spawn_count=count,
+        spawns_per_hour=count // session_stats['length_hours'],
         session_start=session_stats['start'],
         session_end=session_stats['end'],
-        session_length_hours=int(session_stats['length_hours']),
+        session_length_hours=session_stats['length_hours'],
         js_data=js_data,
         icons=icons,
         google_maps_key=config.GOOGLE_MAPS_KEY,
@@ -316,11 +325,10 @@ def report_single(pokemon_id):
         'charts_data': {
             'hours': db.get_spawns_per_hour(session, pokemon_id),
         },
-        'map_center': utils.get_map_center(),
+        'map_center': utils.MAP_CENTER,
         'zoom': 13,
     }
-    session.close()
-    return render_template(
+    template = render_template(
         'report_single.html',
         current_date=datetime.now(),
         area_name=config.AREA_NAME,
@@ -334,11 +342,13 @@ def report_single(pokemon_id):
         google_maps_key=config.GOOGLE_MAPS_KEY,
         js_data=js_data,
     )
+    session.close()
+    return template
 
 
 def sighting_to_marker(sighting):
     return {
-        'icon': '/static/icons/{}.png'.format(sighting.pokemon_id),
+        'icon': 'static/icons/{}.png'.format(sighting.pokemon_id),
         'lat': sighting.lat,
         'lon': sighting.lon,
     }
@@ -353,6 +363,9 @@ def report_heatmap():
     return json.dumps(points)
 
 
-if __name__ == '__main__':
+def main():
     args = get_args()
     app.run(debug=args.debug, threaded=True, host=args.host, port=args.port)
+
+if __name__ == '__main__':
+    main()
