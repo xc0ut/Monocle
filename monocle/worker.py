@@ -68,6 +68,11 @@ class Worker:
     else:
         proxies = None
 
+    if isinstance(conf.HASH_KEY, (tuple, list, set, frozenset)):
+        HASH_KEYS = cycle(conf.HASH_KEY)
+    else:
+        HASH_KEYS = None
+
     if conf.NOTIFY:
         notifier = Notifier()
 
@@ -120,7 +125,9 @@ class Worker:
         self.account_seen = 0
 
         self.api = PGoApi(device_info=device_info)
-        if conf.HASH_KEY:
+        if self.HASH_KEYS:
+            self.api.activate_hash_server(next(self.HASH_KEYS))
+        elif conf.HASH_KEY:
             self.api.activate_hash_server(conf.HASH_KEY)
         self.api.set_position(*self.location, self.altitude)
         if self.proxies:
