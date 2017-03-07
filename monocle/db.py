@@ -199,7 +199,7 @@ class MysteryCache(object):
 class FortCache(object):
     """Simple cache for storing fort sightings"""
     def __init__(self):
-        self.store = utils.load_pickle('forts') or {}
+        self.store = {}
 
     def add(self, sighting):
         if sighting['type'] == 'pokestop':
@@ -433,13 +433,17 @@ def add_spawnpoint(session, pokemon):
     spawn_id = pokemon['spawn_id']
     new_time = pokemon['expire_timestamp'] % 3600
     existing_time = spawns.SPAWNS.get_despawn_seconds(spawn_id)
-    if new_time == existing_time:
+    fixed = spawn_id in spawns.SPAWNS.fixed_points
+    if new_time == existing_time and fixed:
         return
     existing = session.query(Spawnpoint) \
         .filter(Spawnpoint.spawn_id == spawn_id) \
         .first()
     now = round(time.time())
     if existing:
+        if not fixed:
+            existing.lat = pokemon['lat']
+            existing.lon = pokemon['lon']
         existing.updated = now
 
         if (existing.despawn_time is None or
@@ -448,6 +452,7 @@ def add_spawnpoint(session, pokemon):
             if widest and widest > 1710:
                 existing.duration = 60
         elif new_time == existing.despawn_time:
+            spawns.SPAWNS.fixed_points.add(spawn_id)
             return
 
         existing.despawn_time = new_time
@@ -474,18 +479,30 @@ def add_spawnpoint(session, pokemon):
         )
         session.add(obj)
         spawns.SPAWNS.add_known(point)
+    spawns.SPAWNS.fixed_points.add(spawn_id)
 
 
 def add_mystery_spawnpoint(session, pokemon):
     # Check if the same entry already exists
     spawn_id = pokemon['spawn_id']
     point = (pokemon['lat'], pokemon['lon'])
-    if spawns.SPAWNS.db_has(point):
+    fixed = spawn_id in spawns.SPAWNS.fixed_points
+    if spawns.SPAWNS.db_has(point) and fixed:
         return
-    existing = session.query(exists().where(
-        Spawnpoint.spawn_id == spawn_id)).scalar()
-    if existing:
-        return
+    if fixed:
+        existing = session.query(exists().where(
+            Spawnpoint.spawn_id == spawn_id)).scalar()
+        if existing:
+            return
+    else:
+        spawns.SPAWNS.fixed_points.add(spawn_id)
+        existing = session.query(Spawnpoint) \
+            .filter(Spawnpoint.spawn_id == spawn_id) \
+            .first()
+        if existing:
+            existing.lat = pokemon['lat']
+            existing.lon = pokemon['lon']
+            return
     altitude = spawns.SPAWNS.get_altitude(point)
 
     obj = Spawnpoint(
@@ -551,6 +568,8 @@ def add_fort_sighting(session, raw_fort):
         )
         session.add(fort)
     if fort.id:
+        fort.lat = raw_fort['lat']
+        fort.lon = raw_fort['lon']
         existing = session.query(exists().where(and_(
             FortSighting.fort_id == fort.id,
             FortSighting.last_modified == raw_fort['last_modified']
@@ -573,9 +592,12 @@ def add_fort_sighting(session, raw_fort):
 def add_pokestop(session, raw_pokestop):
     if raw_pokestop in FORT_CACHE:
         return
-    pokestop = session.query(exists().where(
-        Pokestop.external_id == raw_pokestop['external_id'])).scalar()
+    pokestop = session.query(Pokestop) \
+        .filter(Pokestop.external_id == raw_pokestop['external_id']) \
+        .first()
     if pokestop:
+        pokestop.lat = raw_pokestop['lat']
+        pokestop.lon = raw_pokestop['lon']
         FORT_CACHE.add(raw_pokestop)
         return
 

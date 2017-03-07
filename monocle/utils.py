@@ -392,8 +392,7 @@ def load_accounts_csv():
     return accounts
 
 
-@jit
-def randomize_point(point, amount=0.0003):
+def randomize_point(point, amount=0.00001):
     '''Randomize point, by up to ~47 meters by default.'''
     lat, lon = point
     return (

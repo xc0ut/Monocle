@@ -242,10 +242,11 @@ class Overseer:
 
         output = [
             'Monocle running for {}'.format(running_for),
-            'Known spawns: {}, unknown: {}, more: {}'.format(
+            'Known spawns: {}, unknown: {}, more: {}, fixed: {}'.format(
                 len(SPAWNS),
                 SPAWNS.mysteries_count,
-                SPAWNS.cells_count),
+                SPAWNS.cells_count,
+                len(SPAWNS.fixed_points)),
             '{} workers, {} threads, {} coroutines'.format(
                 self.count,
                 active_count(),

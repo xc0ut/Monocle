@@ -17,6 +17,7 @@ class Spawns:
         self.cell_points = set()
         self.altitudes = {}
         self.known_points = set()
+        self.fixed_points = set()
         self.log = get_logger('spawns')
 
     def __len__(self):
