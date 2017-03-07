@@ -17,7 +17,7 @@ class Spawns:
         self.cell_points = set()
         self.altitudes = {}
         self.known_points = set()
-        self.fixed_points = set()
+        self.fixed_points = load_pickle('fixed-spawns') or set()
         self.log = get_logger('spawns')
 
     def __len__(self):
@@ -39,6 +39,7 @@ class Spawns:
         self.altitudes.update(a)
         if not self.altitudes:
             self.altitudes = get_point_altitudes()
+        dump_pickle('fixed-spawns', self.fixed_points)
         dump_pickle('spawns', self.pickle_objects)
 
     def get_altitude(self, point):
