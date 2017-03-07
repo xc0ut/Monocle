@@ -3,6 +3,7 @@ from random import choice, randint, uniform, triangular
 from time import time, monotonic
 from queue import Empty
 from itertools import cycle
+from concurrent.futures import CancelledError
 
 from aiopogo import PGoApi, exceptions as ex
 from aiopogo.auth_ptc import AuthPtc
@@ -160,7 +161,7 @@ class Worker:
                     await self.api.set_authentication(
                         username=self.username,
                         password=self.account['password'],
-                        provider=account.get('provider') or 'ptc',
+                        provider=self.account.get('provider') or 'ptc',
                         timeout=conf.LOGIN_TIMEOUT
                     )
             except (ex.AuthTimeoutException, ex.AuthConnectionException) as e:
@@ -684,6 +685,8 @@ class Worker:
         except ex.AiopogoError as e:
             self.log.exception(e.__class__.__name__)
             self.error_code = 'AIOPOGO ERROR'
+        except CancelledError:
+            self.log.warning('Visit cancelled.')
         except Exception as e:
             self.log.exception('A wild {} appeared!', e.__class__.__name__)
             self.error_code = 'EXCEPTION'
@@ -764,6 +767,9 @@ class Worker:
                     if conf.ENCOUNTER:
                         try:
                             await self.encounter(normalized)
+                        except CancelledError:
+                            DB_PROC.add(normalized)
+                            raise
                         except Exception as e:
                             self.log.warning('{} during encounter', e.__class__.__name__)
                     LOOP.create_task(self.notifier.notify(normalized, time_of_day))
@@ -1035,6 +1041,8 @@ class Worker:
             }
             async with session.post('http://2captcha.com/in.php', params=params, timeout=10) as resp:
                 response = await resp.json()
+        except CancelledError:
+            raise
         except Exception as e:
             self.log.error('Got an error while trying to solve CAPTCHA. '
                            'Check your API Key and account balance.')
@@ -1063,6 +1071,8 @@ class Worker:
                 if response.get('request') != 'CAPCHA_NOT_READY':
                     break
                 await sleep(5, loop=LOOP)
+        except CancelledError:
+            raise
         except Exception as e:
             self.log.error('Got an error while trying to solve CAPTCHA. '
                               'Check your API Key and account balance.')
