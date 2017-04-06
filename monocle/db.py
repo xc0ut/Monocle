@@ -313,7 +313,24 @@ class FortSighting(Base):
             name='fort_id_last_modified_unique'
         ),
     )
+class FortDetail(Base):
+    __tablename__ = 'fort_detail'
 
+    id = Column(Integer, primary_key=True)
+    external_id = Column(String(35), ForeignKey('forts.external_id'))
+    player_name = Column(String(50), index=True)
+    pokemon_uid = Column(HUGE_TYPE, ForeignKey('fort_pokemon.pokemon_uid'))
+    last_modified = Column(Integer, index=True)
+
+    __table_args__ = (
+        UniqueConstraint(
+            'external_id',
+            'last_modified',
+            'player_name',
+            name='fort_id_detail_last_modified_unique'
+        ),
+    )
+    
 class FortPokemon(Base):
     __tablename__ = 'fort_pokemon'
 
