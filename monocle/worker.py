@@ -48,7 +48,7 @@ class Worker:
     """Single worker walking on the map"""
 
     if conf.FORCED_KILL:
-        versions = ('0.59.1', '0.57.4', '0.57.3', '0.57.2', '0.55.0')
+        versions = ('0.59.1', '0.59.0', '0.57.4', '0.57.3', '0.57.2', '0.55.0')
     download_hash = "7b9c5056799a2c5c7d48a62c497736cbcf8c4acb"
     scan_delay = conf.SCAN_DELAY if conf.SCAN_DELAY >= 10 else 10
     g = {'seen': 0, 'captchas': 0}
@@ -800,10 +800,6 @@ class Worker:
                                 gym_state = get_gym_details['gym_state']
                                 fort['name'] = get_gym_details['name']
                                 DB_PROC.add(self.normalize_gym(fort))
-                                # This gym already exists in cache with another time?
-                                fort_time = FORT_CACHE.get(self.normalize_gym(fort))
-                                if fort_time + conf.FORT_DETAILS_TIME > fort['last_modified_timestamp_ms'] // 1000:
-                                    continue # Don't process gym details.
                                 for member in get_gym_details.get('gym_state', {}).get('memberships', []):
                                     rowDetail = {}
                                     rowDetail['id'] = fort['id']
