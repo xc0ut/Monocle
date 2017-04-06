@@ -463,6 +463,7 @@ function getWorkers() {
 
 var map = L.map('main-map', {preferCanvas: true, maxZoom: 18,}).setView(_MapCoords, 12.5);
 
+overlays.Gyms.addTo(map);
 
 var control = L.control.layers(null, overlays).addTo(map);
 L.tileLayer(_MapProviderUrl, {
