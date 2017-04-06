@@ -31,9 +31,16 @@ var PokemonIcon = L.Icon.extend({
 
 var FortIcon = L.Icon.extend({
     options: {
-        iconSize: [20, 20],
-        popupAnchor: [0, -10],
-        className: 'fort-icon'
+        iconSize: [40, 40],
+        popupAnchor: [0, -20],
+    },
+    createIcon: function() {
+        var div = document.createElement('div');
+        div.innerHTML = 
+            '<div class="gymmarker">' +
+                '<img class="leaflet-marker-icon" src="' + this.options.iconUrl + '" />' + 
+            '</div>';
+        return div;
     }
 });
 var WorkerIcon = L.Icon.extend({
@@ -205,19 +212,89 @@ function PokemonMarker (raw) {
 }
 
 function FortMarker (raw) {
-    var icon = new FortIcon({iconUrl: '/static/monocle-icons/forts/' + raw.team + '.png'});
+    //var fort_last_seen = time(raw.last_modified);
+    //var last_seen = 0;
+    var gymlevel = 1;
+    if(raw.prestige >= 2000) gymlevel = 2;
+    if(raw.prestige >= 4000) gymlevel = 3;
+    if(raw.prestige >= 8000) gymlevel = 4;
+    if(raw.prestige >= 12000) gymlevel = 5;
+    if(raw.prestige >= 16000) gymlevel = 6;
+    if(raw.prestige >= 20000) gymlevel = 7;
+    if(raw.prestige >= 30000) gymlevel = 8;
+    if(raw.prestige >= 40000) gymlevel = 9;
+    if(raw.prestige >= 50000) gymlevel = 10;
+
+    var icon = new FortIcon({iconUrl: '/static/monocle-icons/forts/' + raw.team + '_' + gymlevel +'.png'});
     var marker = L.marker([raw.lat, raw.lon], {icon: icon, opacity: 1});
     marker.raw = raw;
     markers[raw.id] = marker;
-    marker.on('popupopen',function popupopen (event) {
-        var pokemonName;
-        if (raw.team === 0) {
-            event.popup.setContent('An empty Gym!');
-        } else {
-            event.popup.setContent('Prestige: <b>' + raw.prestige + '</b><br>Guarding Pokemon:<br><b>' + '#' + raw.pokemon_id + ' ' + raw.pokemon_name + '</b>');
+    
+    
+    var prestige = raw.prestige;
+    var result = {team: raw.team, level: gymlevel, name: raw.name, lat: raw.lat, lon: raw.lon, prestige: raw.prestige};
+    var level = 0;
+    marker.on('click', function(e){
+        if(raw.prestige >= 2000) gymlevel = 2;
+        if(raw.prestige >= 4000) gymlevel = 3;
+        if(raw.prestige >= 8000) gymlevel = 4;
+        if(raw.prestige >= 12000) gymlevel = 5;
+        if(raw.prestige >= 16000) gymlevel = 6;
+        if(raw.prestige >= 20000) gymlevel = 7;
+        if(raw.prestige >= 30000) gymlevel = 8;
+        if(raw.prestige >= 40000) gymlevel = 9;
+        if(raw.prestige >= 50000) gymlevel = 10;
+        if(raw.team === 0){
+            swal({
+                title: '<span class="label label-default">' + raw.name +' <img src="/static/monocle-icons/forts/' + raw.team + '.png" label="' + raw.name + '">',
+                html: '<h3>Empty Gym!</h3><a href="https://www.google.com/maps/?daddr='+ raw.lat + ','+ raw.lon +'" target="_blank" title="See in Google Maps">Get directions</a>',
+            });
+            return;
         }
+        var teamLabel = '';
+        switch(raw.team){
+            case 1:
+                teamLabel = 'primary';
+                break;
+            case 2:
+                teamLabel = 'danger';
+                break;
+            case 3:
+                teamLabel = 'warning';
+                break;
+        }
+
+        var fort_id = marker.raw.id.split('-')[1];
+        swal({
+            title: "Loading gym details...",
+            text: "",
+            showConfirmButton: false,
+            allowOutsideClick: false,
+            allowEscapeKey: true
+        }).catch(swal.noop)
+        new Promise(function (resolve, reject) {
+            $.get('/gym_details?fort_id='+fort_id, function (response) {
+                resolve(response);
+            }).fail(function(){
+                reject('We failed to get gym data.');
+            });
+        }).then(function (data) {
+            var pokemons = $('<div class="gym-pokemons"></div>');
+            data.forEach(function(el) {
+                var poke_iv = (((el.iv_attack + el.iv_defense + el.iv_stamina)/45)*100).toFixed(2);
+                //last_seen = el.last_seen;
+                pokemons.append('<div class="gym-pokemon col-xs-12 col-sm-4"><img src="/static/monocle-icons/larger-icons/' + el.pokemon_id + '.png" class="img-responsive"><b>CP: </b>' + el.pokemon_cp +'<br>'+ poke_iv +'%<br><b>' + el.player_name +'</b> (' + el.player_level + ')</div>');
+            });
+           swal({
+               title: '<span class="gym-label label label-' + teamLabel +'">' + raw.name +' <img src="/static/monocle-icons/forts/' + raw.team + '_'+ gymlevel +'.png" label="' + raw.name + '">',
+               showCloseButton: true,
+               showConfirmButton: false,
+               html: '<h3>Prestige: <b>' + raw.prestige + '</b></h3>' + pokemons[0].outerHTML, /* + '<a href="https://www.google.com/maps/?daddr='+ raw.lat + ','+ raw.lon +'" target="_blank" title="See in Google Maps">Get directions</a>',*/
+           }).catch(swal.noop);
+        }).catch(function(reason){
+            swal('Sorry!', reason, 'error');
+        }).catch(swal.noop);
     });
-    marker.bindPopup();
     return marker;
 }
 
@@ -386,7 +463,8 @@ function getWorkers() {
 
 var map = L.map('main-map', {preferCanvas: true, maxZoom: 18,}).setView(_MapCoords, 12.5);
 
-overlays.Pokemon.addTo(map);
+//overlays.Pokemon.addTo(map);
+overlays.Gyms.addTo(map);
 
 L.tileLayer(_MapProviderUrl, {
     opacity: 0.80,

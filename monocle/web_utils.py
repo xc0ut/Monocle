@@ -142,6 +142,7 @@ def get_gym_markers():
         markers.append({
             'id': 'fort-{}'.format(fort['fort_id']),
             'sighting_id': fort['id'],
+            'name': fort['name'],
             'prestige': fort['prestige'],
             'pokemon_id': fort['guard_pokemon_id'],
             'pokemon_name': pokemon_name,
@@ -151,6 +152,23 @@ def get_gym_markers():
         })
     return markers
 
+def get_gym_details(fort_id):
+    markers = []
+    with db.session_scope() as session:
+        pokemons = db.get_fort_pokemon(session, fort_id)
+        for pokemon in pokemons:
+            pokemon_name = POKEMON_NAMES[pokemon['pokemon_id']]
+            markers.append({
+                'player_name': pokemon['player_name'],
+                'player_level': pokemon['level'],
+                'pokemon_id': pokemon['pokemon_id'],
+                'pokemon_name': pokemon_name,
+                'pokemon_cp': pokemon['cp'],
+                'iv_attack': pokemon['iv_attack'],
+                'iv_defense': pokemon['iv_defense'],
+                'iv_stamina': pokemon['iv_stamina']
+            })
+        return markers
 
 def get_spawnpoint_markers():
     markers = []

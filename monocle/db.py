@@ -186,9 +186,29 @@ class FortCache:
         utils.dump_pickle('forts', self.store)
 
 
+class FortDetailCache(object):
+    """Simple cache for storing fort details sightings"""
+    def __init__(self):
+        self.store = utils.load_pickle('forts_detail') or {}
+
+    def add(self, sighting):
+        self.store[str(sighting['external_id']) + sighting['player_name']] = sighting['last_modified']
+
+    def __contains__(self, sighting):
+        existing = self.store.get(str(sighting['last_modified']) + sighting['player_name'])
+        if not existing:
+            return False
+        if existing is True:
+            return True
+        return existing == (str(sighting['last_modified']) + sighting['player_name'])
+
+    def pickle(self):
+        utils.dump_pickle('forts_detail', self.store)
+
 SIGHTING_CACHE = SightingCache()
 MYSTERY_CACHE = MysteryCache()
 FORT_CACHE = FortCache()
+FORT_DETAIL_CACHE = FortDetailCache()
 
 
 class Sighting(Base):
@@ -277,6 +297,7 @@ class FortSighting(Base):
 
     id = Column(Integer, primary_key=True)
     fort_id = Column(Integer, ForeignKey('forts.id'))
+    name = Column(String(100))
     last_modified = Column(Integer, index=True)
     team = Column(TINY_TYPE)
     prestige = Column(MEDIUM_TYPE)
@@ -290,6 +311,35 @@ class FortSighting(Base):
         ),
     )
 
+class FortPokemon(Base):
+    __tablename__ = 'fort_pokemon'
+
+    pokemon_uid = Column(HUGE_TYPE, primary_key=True)
+    pokemon_id = Column(TINY_TYPE)
+    cp = Column(SmallInteger)
+    player_name = Column(String(50), index=True)
+    upgrades = Column(TINY_TYPE)
+    move_1 = Column(SmallInteger)
+    move_2 = Column(SmallInteger)
+    height = Column(FLOAT_TYPE)
+    weight = Column(FLOAT_TYPE)
+    stamina = Column(SmallInteger)
+    stamina_max = Column(SmallInteger)
+    cp_multiplier = Column(FLOAT_TYPE)
+    additional_cp_multiplier = Column(FLOAT_TYPE)
+    iv_defense = Column(TINY_TYPE)
+    iv_stamina = Column(TINY_TYPE)
+    iv_attack = Column(TINY_TYPE)
+    last_seen = Column(Integer)
+
+class FortPlayer(Base):
+    __tablename__ = 'fort_player'
+
+    name = Column(String(50), primary_key=True)
+    team = Column(TINY_TYPE)
+    level = Column(TINY_TYPE)
+    last_seen = Column(Integer)
+    
 
 class Pokestop(Base):
     __tablename__ = 'pokestops'
@@ -496,11 +546,82 @@ def add_fort_sighting(session, raw_fort):
         team=raw_fort['team'],
         prestige=raw_fort['prestige'],
         guard_pokemon_id=raw_fort['guard_pokemon_id'],
+        name=raw_fort['name'],
         last_modified=raw_fort['last_modified'],
     )
     session.add(obj)
     FORT_CACHE.add(raw_fort)
 
+def add_fort_detail_sighting(session, raw_fort_detail):
+    if raw_fort_detail in FORT_DETAIL_CACHE:
+        return
+
+    existing = session.query(exists().where(and_(
+        FortDetail.external_id == raw_fort_detail['external_id'],
+        FortDetail.last_modified == raw_fort_detail['last_modified'],
+        FortDetail.player_name == raw_fort_detail['player_name']
+    ))).scalar()
+    if existing:
+        # Why is it not in the cache? It should be there!
+        FORT_DETAIL_CACHE.add(raw_fort_detail)
+        return
+    obj = FortDetail(
+        external_id=raw_fort_detail['external_id'],
+        player_name=raw_fort_detail['player_name'],
+        pokemon_uid=raw_fort_detail['pokemon_uid'],
+        last_modified=raw_fort_detail['last_modified'],
+    )
+    session.add(obj)
+    FORT_DETAIL_CACHE.add(raw_fort_detail)
+
+def add_fort_pokemon_sighting(session, raw_fort_pokemon):
+    pokemon = session.query(FortPokemon) \
+        .filter(FortPokemon.pokemon_uid == raw_fort_pokemon['pokemon_uid']) \
+        .first()
+    if not pokemon:
+        pokemon = FortPokemon(
+            pokemon_uid=raw_fort_pokemon['pokemon_uid'],
+            pokemon_id=raw_fort_pokemon['pokemon_id'],
+            cp=raw_fort_pokemon['cp'],
+            player_name=raw_fort_pokemon['player_name'],
+            upgrades=raw_fort_pokemon['upgrades'],
+            move_1=raw_fort_pokemon['move_1'],
+            move_2=raw_fort_pokemon['move_2'],
+            height=raw_fort_pokemon['height'],
+            weight=raw_fort_pokemon['weight'],
+            stamina=raw_fort_pokemon['stamina'],
+            stamina_max=raw_fort_pokemon['stamina_max'],
+            cp_multiplier=raw_fort_pokemon['cp_multiplier'],
+            additional_cp_multiplier=raw_fort_pokemon['additional_cp_multiplier'],
+            iv_defense=raw_fort_pokemon['iv_defense'],
+            iv_stamina=raw_fort_pokemon['iv_stamina'],
+            iv_attack=raw_fort_pokemon['iv_attack'],
+            last_seen=raw_fort_pokemon['last_seen']
+        )
+        session.add(pokemon)
+        return
+    if raw_fort_pokemon['last_seen'] > pokemon.last_seen:
+        pokemon.cp = raw_fort_pokemon['cp']
+        pokemon.stamina = raw_fort_pokemon['stamina']
+        pokemon.last_seen = raw_fort_pokemon['last_seen']
+
+def add_fort_player_sighting(session, raw_fort_player):
+    player = session.query(FortPlayer) \
+        .filter(FortPlayer.name == raw_fort_player['name']) \
+        .first()
+
+    if not player:
+        player = FortPlayer(
+            name=raw_fort_player['name'],
+            team=raw_fort_player['team'],
+            level=raw_fort_player['level'],
+            last_seen=raw_fort_player['last_seen']
+        )
+        session.add(player)
+        return
+    if raw_fort_player['level'] > player.level or raw_fort_player['last_seen'] > player.last_seen:
+        player.level = raw_fort_player['level']
+        player.last_seen = raw_fort_player['last_seen']
 
 def add_pokestop(session, raw_pokestop):
     if raw_pokestop in FORT_CACHE:
@@ -571,6 +692,7 @@ def get_forts(session):
         SELECT
             fs.fort_id,
             fs.id,
+            fs.name,
             fs.team,
             fs.prestige,
             fs.guard_pokemon_id,
@@ -583,6 +705,32 @@ def get_forts(session):
     '''.format(where=where))
     return query.fetchall()
 
+def get_fort_pokemon(session, fort_id):
+    query = session.execute('''
+        SELECT
+            fd.player_name,
+            fpl.level,
+            fp.pokemon_id,
+            fp.cp,
+            fp.iv_attack,
+            fp.iv_defense,
+            fp.iv_stamina,
+            fp.move_1,
+            fp.move_2,
+            fd.last_modified
+        FROM forts as ft
+            JOIN fort_detail fd on ft.external_id = fd.external_id
+            JOIN fort_pokemon fp on fd.pokemon_uid = fp.pokemon_uid
+            JOIN fort_player fpl on fd.player_name = fpl.name
+        WHERE ft.id = {fort_id}
+        AND fd.last_modified = (
+            SELECT MAX(last_modified)
+            FROM fort_detail
+            WHERE external_id = ft.external_id
+        )
+        ORDER BY CP ASC
+    '''.format(fort_id=fort_id))
+    return query.fetchall()    
 
 def get_session_stats(session):
     query = session.query(func.min(Sighting.expire_timestamp),
