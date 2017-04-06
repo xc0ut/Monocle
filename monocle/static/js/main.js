@@ -472,8 +472,8 @@ L.tileLayer(_MapProviderUrl, {
 }).addTo(map);
 map.whenReady(function () {
     overlays.Workers.hidden = true;
-    getPokemon();
-    setInterval(getPokemon, 30000);
+    getGyms();
+    setInterval(getGyms, 30000);
 });
 
 $("#settings>ul.nav>li>a").on('click', function(){
