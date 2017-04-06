@@ -33,14 +33,6 @@ var FortIcon = L.Icon.extend({
     options: {
         iconSize: [40, 40],
         popupAnchor: [0, -20],
-    },
-    createIcon: function() {
-        var div = document.createElement('div');
-        div.innerHTML = 
-            '<div class="gymmarker">' +
-                '<img class="leaflet-marker-icon" src="' + this.options.iconUrl + '" />' + 
-            '</div>';
-        return div;
     }
 });
 var WorkerIcon = L.Icon.extend({
