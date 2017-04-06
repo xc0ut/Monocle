@@ -154,6 +154,7 @@ def get_gym_markers():
 
 def get_gym_details(fort_id):
     markers = []
+    pokemon_names = POKEMON
     with db.session_scope() as session:
         pokemons = db.get_fort_pokemon(session, fort_id)
         for pokemon in pokemons:
