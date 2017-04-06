@@ -182,6 +182,9 @@ class FortCache:
             return True
         return existing == sighting['last_modified']
 
+    def get(self, sighting):
+        return self.store.get(sighting['external_id']) or 0
+        
     def pickle(self):
         utils.dump_pickle('forts', self.store)
 
