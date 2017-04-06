@@ -182,3 +182,98 @@
     margin-bottom: 0;
     font-weight: initial;
 }
+
+.gym-pokemons{
+    text-align: center;
+    display: table-cell;
+    padding-left: 20px;
+    padding-right: 20px;
+    margin: 1em 0;
+    overflow-y:scroll;
+    max-height: 60vh;
+    display: -webkit-box;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.gym-pokemon {
+    text-align: center;
+    font-size: 14px;
+}
+
+
+
+.gym-pokemon > img{
+    margin-left: auto;
+    margin-right: auto;
+    max-width:50px;
+}
+
+.teamcolor_3{
+    border-radius: 50px;
+    background-color: black;
+    text-align: center;
+    background-color: rgba(255, 215, 0, 0.7);
+    font-size: 20px;
+    margin: 32px 0 0 0;
+    padding: 0.5em;
+    color: black;
+    width: 100%;
+    
+}
+
+.teamcolor_2{
+    border-radius: 50px;
+    background-color: black;
+    text-align: center;
+    background-color: rgba(178, 34, 34, 0.7);
+    font-size: 20px;
+    margin: 32px 0 0 0;
+    padding: 0.5em;
+    color: white;
+    width: 100%;
+}
+
+.teamcolor_1{
+    border-radius: 50px;
+    background-color: black;
+    text-align: center;
+    background-color: rgba(65, 105, 225, 0.7);
+    font-size: 20px;
+    margin: 32px 0 0 0;
+    padding: 0.5em;
+    color: white;
+    width: 100%;
+}
+
+button{
+    background-color: #AEDEF4;
+    color: white;
+    border: none;
+    box-shadow: none;
+    font-size: 17px;
+    font-weight: 500;
+    font-weight: 600;
+    border-radius: 3px;
+    padding: 0.5em 0.5em;
+    margin: 0.5em 0 0 0;
+    cursor: pointer;
+    
+}
+
+.gymmarker {
+    position: absolute;
+    left: -16px;
+    top: -20px;
+    width: 32px;
+    height: 32px;
+    text-align: center;
+    margin: 0;
+    padding: 0;
+}
+
+.gymmarker img {
+    width:40px;
+}
