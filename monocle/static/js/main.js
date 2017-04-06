@@ -202,7 +202,7 @@ function PokemonMarker (raw) {
             marker.setOpacity(getOpacity(diff));
         } else {
             overlays.Pokemon.removeLayer(marker);
-            overlays.Pokemon.refreshClusters();
+            if(!overlays.Pokemon.hidden) overlays.Pokemon.refreshClusters();
             markers[marker.raw.id] = undefined;
             clearInterval(marker.opacityInterval);
         }
@@ -465,7 +465,7 @@ var map = L.map('main-map', {preferCanvas: true, maxZoom: 18,}).setView(_MapCoor
 
 overlays.Gyms.addTo(map);
 
-var control = L.control.layers(null, overlays).addTo(map);
+//var control = L.control.layers(null, overlays).addTo(map);
 L.tileLayer(_MapProviderUrl, {
     opacity: 0.80,
     attribution: _MapProviderAttribution
@@ -703,7 +703,7 @@ function time(s) {
 
 var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
-if (!isMobile) {
+if (!isMobile | !overlays.Gyms.hidden) {
     Notification.requestPermission();
 }
 
