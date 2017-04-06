@@ -464,9 +464,7 @@ function getWorkers() {
 var map = L.map('main-map', {preferCanvas: true, maxZoom: 18,}).setView(_MapCoords, 12.5);
 
 
-map.addLayer(overlays.Gyms);
-map.addLayer(overlays.Pokemon);
-
+var control = L.control.layers(null, overlays).addTo(map);
 L.tileLayer(_MapProviderUrl, {
     opacity: 0.80,
     attribution: _MapProviderAttribution
