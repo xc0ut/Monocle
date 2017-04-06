@@ -158,7 +158,7 @@ def get_gym_details(fort_id):
     with db.session_scope() as session:
         pokemons = db.get_fort_pokemon(session, fort_id)
         for pokemon in pokemons:
-            pokemon_name = POKEMON_NAMES[pokemon['pokemon_id']]
+            pokemon_name = pokemon_names[pokemon['pokemon_id']]
             markers.append({
                 'player_name': pokemon['player_name'],
                 'player_level': pokemon['level'],
