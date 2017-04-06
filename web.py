@@ -19,9 +19,10 @@ MAPFILE = 'custom.html' if conf.LOAD_CUSTOM_HTML_FILE else 'newmap.html'
 CSS_JS = ''
 SOCIAL_LINKS = ''
 JS_VARS = Markup(
-    "_defaultSettings['FIXED_OPACITY'] = '{:d}'; "
-    "_defaultSettings['SHOW_TIMER'] = '{:d}'; "
-    "_defaultSettings['TRASH_IDS'] = [{}]; ".format(conf.FIXED_OPACITY, conf.SHOW_TIMER, ', '.join(str(p_id) for p_id in conf.TRASH_IDS))
+    "_defaultSettings['NOTIF_SOUND'] = '{}'; "
+    "_defaultSettings['FIXED_OPACITY'] = '{}'; "
+    "_defaultSettings['SHOW_TIMER'] = '{}'; "
+    "_defaultSettings['TRASH_IDS'] = [{}]; ".format(int(1),int(conf.FIXED_OPACITY), int(conf.SHOW_TIMER), ', '.join(str(p_id) for p_id in conf.TRASH_IDS))
 )
 if conf.LOAD_CUSTOM_CSS_FILE:
     CSS_JS += '<link rel="stylesheet" href="static/css/custom.css">'

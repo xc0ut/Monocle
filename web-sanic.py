@@ -25,9 +25,10 @@ MAPFILE = 'custom.html' if conf.LOAD_CUSTOM_HTML_FILE else 'newmap.html'
 CSS_JS = ''
 SOCIAL_LINKS = ''
 JS_VARS = Markup(
-    "_defaultSettings['FIXED_OPACITY'] = '{:d}'; "
-    "_defaultSettings['SHOW_TIMER'] = '{:d}'; "
-    "_defaultSettings['TRASH_IDS'] = [{}]; ".format(conf.FIXED_OPACITY, conf.SHOW_TIMER, ', '.join(str(p_id) for p_id in conf.TRASH_IDS))
+    "_defaultSettings['FIXED_OPACITY'] = '{}'; "
+    "_defaultSettings['SHOW_TIMER'] = '{}'; "
+    "_defaultSettings['NOTIF_SOUND'] = '{}'; "
+    "_defaultSettings['TRASH_IDS'] = [{}]; ".format(int(conf.FIXED_OPACITY), int(conf.SHOW_TIMER),int(0), ', '.join(str(p_id) for p_id in conf.TRASH_IDS))
 )
 if conf.LOAD_CUSTOM_CSS_FILE:
     CSS_JS += '<link rel="stylesheet" href="static/css/custom.css">'
@@ -125,6 +126,7 @@ async def get_pokemarkers_async(after_id):
     markers = []
     pokemon_names = POKEMON
     damage = DAMAGE
+    moves = MOVES
     async with create_pool(**conf.DB) as pool:
         async with pool.acquire() as conn:
             async with conn.transaction():
@@ -149,8 +151,8 @@ async def get_pokemarkers_async(after_id):
                             'atk': row[5],
                             'def': row[6],
                             'sta': row[7],
-                            'move1': row[8],
-                            'move2': row[9],
+                            'move1': moves[row[8]],
+                            'move2': moves[row[9]],
                             'damage1': damage[row[8]],
                             'damage2': damage[row[9]]
                         })
