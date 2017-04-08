@@ -277,3 +277,58 @@ button{
 .gymmarker img {
     width:40px;
 }
+
+.remaining_text_iv {
+    border-radius: 25px;
+    background-color: black;
+    text-align: center;
+    background-color: rgba(100, 100, 100, 0.7);
+    font-size: 11px;
+    margin: 32px 0 0 0;
+    padding: 0;
+    color: white;
+    z-index: 1000;
+    visibility:hidden;
+    height:0px;
+    width:0px;
+}
+
+.israre {
+    visibility:visible;
+    width: 100% !important;
+    height:15px !important;
+}
+
+#iv100 {
+    color:red !important; 
+    background-color: white !important;
+    visibility: visible !important;
+    width: 100% !important;
+    height:15px !important;
+}
+#iv90 {
+    visibility: visible !important;
+    width: 100% !important;
+    height:15px !important;
+}
+#iv80 {
+
+}
+#iv70 {
+
+}
+#iv60 {
+
+}
+#iv50 {
+
+}
+#iv40 {
+
+}
+#iv30 {
+
+}
+#iv20 {
+  visibility: hidden !important;
+}

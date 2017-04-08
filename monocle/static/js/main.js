@@ -4,7 +4,6 @@ var _WorkerIconUrl = 'static/monocle-icons/assets/ball.png';
 var _NotificationIconUrl = 'static/monocle-icons/assets/ultra.png';
 var _PokestopIconUrl = 'static/monocle-icons/assets/stop.png';
 
-//var __defaultSettings["NOTIF_SOUND"] = 0;
 var _NotificationID = [0];
 
 var rarelist = [228, 231, 4, 176,179,133, 116, 95, 237, 158,159,157,156, 154, 155, 152,153, 79, 123, 216, 133, 149, 83, 59, 62, 65, 68, 76, 89, 103, 112, 130, 131, 137, 143, 144, 145, 146, 150, 151, 26, 31, 34, 45, 71, 94, 113, 115, 128, 139, 141, 142, 58, 129, 63, 102, 111, 125, 147, 148, 66, 154,157,160,181,186,199,208,212,214,229,230,232,233,241,242,246,247,248, 217];
@@ -463,8 +462,11 @@ function getWorkers() {
 
 var map = L.map('main-map', {preferCanvas: true, maxZoom: 18,}).setView(_MapCoords, 12.5);
 
+//to add pokemons by default to the map uncomment the line below
+//overlays.Pokemon.addto(map);
 overlays.Gyms.addTo(map);
 
+//uncomment this for a visible layer control
 //var control = L.control.layers(null, overlays).addTo(map);
 L.tileLayer(_MapProviderUrl, {
     opacity: 0.80,
@@ -474,6 +476,9 @@ map.whenReady(function () {
     overlays.Workers.hidden = true;
     getGyms();
     setInterval(getGyms, 30000);
+    //uncomment this to be able to see pokemons on the map
+    //getPokemon();
+    //setInterval(getPokemon, 30000);
 });
 
 $("#settings>ul.nav>li>a").on('click', function(){
@@ -703,7 +708,7 @@ function time(s) {
 
 var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
-if (!isMobile | !overlays.Gyms.hidden) {
+if (!isMobile) {
     Notification.requestPermission();
 }
 
