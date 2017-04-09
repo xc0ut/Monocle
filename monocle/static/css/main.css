@@ -300,11 +300,13 @@ button{
 }
 
 #iv100 {
-    color:red !important; 
-    background-color: white !important;
+    color:white !important; 
+    background-color: red !important;
     visibility: visible !important;
     width: 100% !important;
     height:15px !important;
+    margin-bottom: 2px;
+    font-weight: bold;
 }
 #iv90 {
     visibility: visible !important;

@@ -463,7 +463,7 @@ function getWorkers() {
 var map = L.map('main-map', {preferCanvas: true, maxZoom: 18,}).setView(_MapCoords, 12.5);
 
 //to add pokemons by default to the map uncomment the line below
-//overlays.Pokemon.addto(map);
+//overlays.Pokemon.addTo(map);
 overlays.Gyms.addTo(map);
 
 //uncomment this for a visible layer control
