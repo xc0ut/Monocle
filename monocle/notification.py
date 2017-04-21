@@ -124,7 +124,7 @@ class PokeImage:
         self.context = cairo.Context(ims)
         pokepic = resource_stream('monocle', 'static/monocle-icons/original-icons/{}.png'.format(self.pokemon_id))
         if stats:
-			self.draw_stats()
+            self.draw_stats()
         self.draw_image(pokepic, 204, 224)
         self.draw_name(50 if stats else 120)
         image = TemporaryFile(suffix='.png')
