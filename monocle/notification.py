@@ -104,14 +104,6 @@ class PokeImage:
     def __init__(self, pokemon, move1, move2, time_of_day=0, stats=conf.IMAGE_STATS):
         self.pokemon_id = pokemon['pokemon_id']
         self.name = POKEMON[self.pokemon_id]
-        try:
-            self.attack = pokemon['individual_attack']
-            self.defense = pokemon['individual_defense']
-            self.stamina = pokemon['individual_stamina']
-        except KeyError:
-            pass
-        self.move1 = move1
-        self.move2 = move2
         self.time_of_day = time_of_day
 
     def create(self, stats=conf.IMAGE_STATS):
@@ -131,7 +123,8 @@ class PokeImage:
         ims = cairo.ImageSurface.create_from_png(bg)
         self.context = cairo.Context(ims)
         pokepic = resource_stream('monocle', 'static/monocle-icons/original-icons/{}.png'.format(self.pokemon_id))
-        self.draw_stats()
+        if stats:
+			self.draw_stats()
         self.draw_image(pokepic, 204, 224)
         self.draw_name(50 if stats else 120)
         image = TemporaryFile(suffix='.png')
