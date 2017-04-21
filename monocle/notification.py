@@ -35,8 +35,8 @@ if conf.NOTIFY:
         TWITTER=True
 
         if conf.TWEET_IMAGES:
-            if not conf.ENCOUNTER:
-                raise ValueError('You enabled TWEET_IMAGES but ENCOUNTER is not set.')
+            if conf.IMAGE_STATS and not conf.ENCOUNTER:
+                raise ValueError('You enabled TWEET_STATS but ENCOUNTER is not set.')
             try:
                 import cairo
             except ImportError as e:
@@ -101,7 +101,7 @@ class NotificationCache:
 
 
 class PokeImage:
-    def __init__(self, pokemon, move1, move2, time_of_day=0):
+    def __init__(self, pokemon, move1, move2, time_of_day=0, stats=conf.IMAGE_STATS):
         self.pokemon_id = pokemon['pokemon_id']
         self.name = POKEMON[self.pokemon_id]
         try:
@@ -114,7 +114,16 @@ class PokeImage:
         self.move2 = move2
         self.time_of_day = time_of_day
 
-    def create(self):
+    def create(self, stats=conf.IMAGE_STATS):
+		if stats:
+			try:
+				self.attack = pokemon['individual_attack']
+				self.defense = pokemon['individual_defense']
+				self.stamina = pokemon['individual_stamina']
+			except KeyError:
+				pass
+			self.move1 = move1
+			self.move2 = move2
         if self.time_of_day > 1:
             bg = resource_stream('monocle', 'static/monocle-icons/assets/notification-bg-night.png')
         else:
@@ -124,19 +133,19 @@ class PokeImage:
         pokepic = resource_stream('monocle', 'static/monocle-icons/original-icons/{}.png'.format(self.pokemon_id))
         self.draw_stats()
         self.draw_image(pokepic, 204, 224)
-        self.draw_name()
+        self.draw_name(50 if stats else 120)
         image = TemporaryFile(suffix='.png')
         ims.write_to_png(image)
         return image
 
-    def draw_stats(self):
+    def draw_stats(self, iv_font=conf.IV_FONT, move_font=conf.MOVE_FONT):
         """Draw the Pokemon's IV's and moves."""
 
         self.context.set_line_width(1.75)
         text_x = 240
 
         try:
-            self.context.select_font_face(conf.IV_FONT or "monospace")
+            self.context.select_font_face(conf.IV_FONT)
             self.context.set_font_size(22)
 
             # black stroke
@@ -153,7 +162,7 @@ class PokeImage:
             pass
 
         if self.move1 or self.move2:
-            self.context.select_font_face(conf.MOVE_FONT or "sans-serif")
+            self.context.select_font_face(conf.MOVE_FONT)
             self.context.set_font_size(16)
 
             # black stroke
@@ -188,8 +197,8 @@ class PokeImage:
         # calculate proportional scaling
         img_height = ims.get_height()
         img_width = ims.get_width()
-        width_ratio = float(width) / float(img_width)
-        height_ratio = float(height) / float(img_height)
+        width_ratio = width / img_width
+        height_ratio = height / img_height
         scale_xy = min(height_ratio, width_ratio)
         # scale image and add it
         self.context.save()
@@ -211,12 +220,12 @@ class PokeImage:
         self.context.paint()
         self.context.restore()
 
-    def draw_name(self):
+    def draw_name(self, pos, font=conf.NAME_FONT):
         """Draw the Pokemon's name."""
         self.context.set_line_width(2.5)
         text_x = 240
-        text_y = 50
-        self.context.select_font_face(conf.NAME_FONT or "sans-serif")
+        text_y = pos
+        self.context.select_font_face(font)
         self.context.set_font_size(32)
         self.context.move_to(text_x, text_y)
         self.context.set_source_rgba(0, 0, 0)
