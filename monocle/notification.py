@@ -115,15 +115,15 @@ class PokeImage:
         self.time_of_day = time_of_day
 
     def create(self, stats=conf.IMAGE_STATS):
-		if stats:
-			try:
-				self.attack = pokemon['individual_attack']
-				self.defense = pokemon['individual_defense']
-				self.stamina = pokemon['individual_stamina']
-			except KeyError:
-				pass
-			self.move1 = move1
-			self.move2 = move2
+        if stats:
+            try:
+                self.attack = pokemon['individual_attack']
+                self.defense = pokemon['individual_defense']
+                self.stamina = pokemon['individual_stamina']
+            except KeyError:
+                pass
+            self.move1 = move1
+            self.move2 = move2
         if self.time_of_day > 1:
             bg = resource_stream('monocle', 'static/monocle-icons/assets/notification-bg-night.png')
         else:
