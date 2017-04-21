@@ -4,11 +4,10 @@ var _WorkerIconUrl = 'static/monocle-icons/assets/ball.png';
 var _NotificationIconUrl = 'static/monocle-icons/assets/ultra.png';
 var _PokestopIconUrl = 'static/monocle-icons/assets/stop.png';
 
-//var __defaultSettings["NOTIF_SOUND"] = 0;
-var _NotificationID = [0];
+var _NotificationID = [0]; //This is the default list for notifications
 
-var rarelist = [228, 231, 4, 176,179,133, 116, 95, 237, 158,159,157,156, 154, 155, 152,153, 79, 123, 216, 133, 149, 83, 59, 62, 65, 68, 76, 89, 103, 112, 130, 131, 137, 143, 144, 145, 146, 150, 151, 26, 31, 34, 45, 71, 94, 113, 115, 128, 139, 141, 142, 58, 129, 63, 102, 111, 125, 147, 148, 66, 154,157,160,181,186,199,208,212,214,229,230,232,233,241,242,246,247,248, 217];
-var ultralist = [147, 217, 147, 196, 197, 137, 113, 149, 83, 59, 68,  65, 76, 89, 103, 130, 131, 143, 144, 145, 146, 150, 151, 3, 6, 9, 26, 45, 94, 115, 128, 139, 141, 142, 154,157,160,181,186,199,208,212,214,229,230,233,241,242,246,247,248, 201]
+//var rarelist = [228, 231, 4, 176,179,133, 116, 95, 237, 158,159,157,156, 154, 155, 152,153, 79, 123, 216, 133, 149, 83, 59, 62, 65, 68, 76, 89, 103, 112, 130, 131, 137, 143, 144, 145, 146, 150, 151, 26, 31, 34, 45, 71, 94, 113, 115, 128, 139, 141, 142, 58, 129, 63, 102, 111, 125, 147, 148, 66, 154,157,160,181,186,199,208,212,214,229,230,232,233,241,242,246,247,248, 217];
+//var ultralist = [147, 217, 147, 196, 197, 137, 113, 149, 83, 59, 68,  65, 76, 89, 103, 130, 131, 143, 144, 145, 146, 150, 151, 3, 6, 9, 26, 45, 94, 115, 128, 139, 141, 142, 154,157,160,181,186,199,208,212,214,229,230,233,241,242,246,247,248, 201]
 
 var PokemonIcon = L.Icon.extend({
     options: {
@@ -22,7 +21,7 @@ var PokemonIcon = L.Icon.extend({
               '<div class="pokeimg">' +
                    '<img class="leaflet-marker-icon" src="' + this.options.iconUrl + '" />' +
               '</div>' +
-              '<div class="remaining_text_iv '+ this.options.rare +'" id="iv'+this.options.ivrange +'">' + this.options.iv.toFixed(0) +'%</div>' +
+              //'<div class="remaining_text_iv '+ this.options.rare +'" id="iv'+this.options.ivrange +'">' + this.options.iv.toFixed(0) +'%</div>' +
               '<div class="remaining_text" data-expire="' + this.options.expires_at + '">' + calculateRemainingTime(this.options.expires_at) + '</div>' +
             '</div>';
         return div;
@@ -58,6 +57,7 @@ var PokestopIcon = L.Icon.extend({
     }
 });
 
+//Trash layer is not supported atm, rewrite movetolayer make trash a markerclustergroup 
 var markers = {};
 var overlays = {
     Pokemon: L.markerClusterGroup({ disableClusteringAtZoom: 12,spiderLegPolylineOptions: { weight: 1.5, color: '#fff', opacity: 0.5 },zoomToBoundsOnClick: false }),
@@ -94,7 +94,9 @@ function getPopupContent (item) {
     var seconds = parseInt(diff - (minutes * 60));
     var expires_at = minutes + 'm ' + seconds + 's';
     var content = '<b>' + item.name + '</b> - <a href="https://pokemongo.gamepress.gg/pokemon/' + item.pokemon_id + '">#' + item.pokemon_id + '</a>';
-    if(item.atk != undefined){
+    
+	/*
+	if(item.atk != undefined){
         var totaliv = 100 * (item.atk + item.def + item.sta) / 45;
         content += ' - <b>' + totaliv.toFixed(2) + '%</b></br>';
         content += 'Disappears in: ' + expires_at + '<br>';
@@ -103,9 +105,11 @@ function getPopupContent (item) {
     } else {
         content += '<br>Disappears in: ' + expires_at + '<br>';
     }
+	*/
+	content += '<br>Disappears in: ' + expires_at + '<br>';
     content += '<a href="#" data-pokeid="'+item.pokemon_id+'" data-newlayer="trash" class="popup_filter_link">Hide</a>';
     content += '&nbsp; | &nbsp;';
-    //TODO MERGE
+
     var userPref = getPreference('notif-'+item.pokemon_id);
     if (userPref == 'rare'){
         content += '<a href="#" data-pokeid="'+item.pokemon_id+'" data-newnotif="common" class="popup_notif_link">Unnotify</a>';
@@ -123,11 +127,10 @@ function getOpacity (diff) {
     return 0.5 + diff / 600;
 }
 
-var hidden100 = [10, 11, 13, 14, 16, 17, 41, 161, 163, 165,167,177,183,190,194, 198, 220];
+//var hidden100 = [10, 11, 13, 14, 16, 17, 41, 161, 163, 165,167,177,183,190,194, 198, 220];
 function PokemonMarker (raw) {
-    var ivrange = 0;
+    /*var ivrange = 0;
     var rare = "notrare";
-    
     var totaliv = 100 * (raw.atk + raw.def + raw.sta) / 45;
     if (rarelist.includes(raw.pokemon_id) && totaliv > 80 || ultralist.includes(raw.pokemon_id)) rare = "israre";
     if (totaliv > 99) ivrange = 100;
@@ -140,6 +143,8 @@ function PokemonMarker (raw) {
     else if(totaliv > 30) ivrange = 30;
     else if(totaliv > 20) ivrange = 20;
     var icon = new PokemonIcon({iconUrl: '/static/monocle-icons/icons/' + raw.pokemon_id + '.png', ivrange: ivrange,rare: rare, iv: totaliv,expires_at: raw.expires_at});
+	*/
+    var icon = new PokemonIcon({iconUrl: '/static/monocle-icons/icons/' + raw.pokemon_id + '.png', expires_at: raw.expires_at});
     var marker = L.marker([raw.lat, raw.lon], {icon: icon, opacity: 1});
 
     var intId = parseInt(raw.id.split('-')[1]);
@@ -147,21 +152,24 @@ function PokemonMarker (raw) {
         _last_pokemon_id = intId;
     }
     
-    var ishidden100 = hidden100.includes(raw.pokemon_id);
+    /*var ishidden100 = hidden100.includes(raw.pokemon_id);
     if (totaliv==100 && !ishidden100){
         marker.overlay = 'Pokemon';
     } 
-    else if (raw.trash) {
+	*/
+    if (raw.trash) {
         marker.overlay = 'Trash';
     } 
     else {
         marker.overlay = 'Pokemon';
     }
     var userPreference = getPreference('filter-'+raw.pokemon_id);
-    if (totaliv==100 && !ishidden100){
+    /*
+	if (totaliv==100 && !ishidden100){
         marker.overlay = 'Pokemon';
     } 
-    else if (userPreference === 'pokemon'){
+	*/
+    if (userPreference === 'pokemon'){
         marker.overlay = 'Pokemon';
     }else if (userPreference === 'trash'){
         marker.overlay = 'Trash';
@@ -177,9 +185,11 @@ function PokemonMarker (raw) {
     marker.raw = raw;
     markers[raw.id] = marker;
     marker.on('popupopen',function popupopen (event) {
+		event.popup.options.autoPan = true; // Pan into view once
         event.popup.setContent(getPopupContent(event.target.raw));
         event.target.popupInterval = setInterval(function () {
             event.popup.setContent(getPopupContent(event.target.raw));
+			event.popup.options.autoPan = false; // Don't fight user panning
         }, 1000);
     });
     marker.on('popupclose', function (event) {
@@ -241,6 +251,7 @@ function addPokemonToMap (data, map) {
             return;
         }
         var marker = PokemonMarker(item);
+		//TODO add trash layer support
         if (marker.overlay == "Pokemon")
         {
             overlays.Pokemon.addLayer(marker);
@@ -386,16 +397,42 @@ function getWorkers() {
 
 var map = L.map('main-map', {preferCanvas: true, maxZoom: 18,}).setView(_MapCoords, 12.5);
 
+
 overlays.Pokemon.addTo(map);
+//overlays.Gyms.addTo(map);
+//overlays.Spawns.addTo(map);
+//overlays.Pokestops.addTo(map);
+//overlays.ScanArea.addTo(map);
+//overlays.Workers.addTo(map);
+//uncomment the layers you want to be shown by default
+//also uncomment the lines in map.whenready so that they are updated
 
 L.tileLayer(_MapProviderUrl, {
     opacity: 0.80,
     attribution: _MapProviderAttribution
 }).addTo(map);
 map.whenReady(function () {
+    $('.my-location').on('click', function () {
+        map.locate({ enableHighAccurracy: true, setView: true });
+    });
+    //overlays.Gyms.once('add', function(e) {
+    //    getGyms();
+    //})
+    //overlays.Spawns.once('add', function(e) {
+    //    getSpawnPoints();
+    //})
+    //overlays.Pokestops.once('add', function(e) {
+    //    getPokestops();
+    //})
+	//getScanAreaCoords();
+	//getWorkers();
+	
     overlays.Workers.hidden = true;
     getPokemon();
+	
     setInterval(getPokemon, 30000);
+	//setInterval(getGyms, 110000)
+	//setInterval(getWorkers, 14000);
 });
 
 $("#settings>ul.nav>li>a").on('click', function(){
@@ -634,7 +671,8 @@ function spawnNotification(raw) {
    if (!isMobile) {
    var theIcon = '/static/monocle-icons/icons/' + raw.pokemon_id + '.png';
    var theTitle = raw.name + ' has spawned!';
-   var theBody = raw.atk+'/'+raw.def+'/'+raw.sta +' and Expires at ' + time(raw.expires_at); 
+   //var theBody = raw.atk+'/'+raw.def+'/'+raw.sta +' and Expires at ' + time(raw.expires_at); 
+   var theBody = 'Expires at ' + time(raw.expires_at); 
     
   var options = {
     body: theBody,
