@@ -6,12 +6,13 @@ var _PokestopIconUrl = 'static/monocle-icons/assets/stop.png';
 
 var _NotificationID = [0]; //This is the default list for notifications
 
+//IV control lists, rare shows iv if it's %95+, ultralist shows ivs always, and hidden100 is the blacklist for always showing iv of 100% pokemons
 //var rarelist = [228, 231, 4, 176,179,133, 116, 95, 237, 158,159,157,156, 154, 155, 152,153, 79, 123, 216, 133, 149, 83, 59, 62, 65, 68, 76, 89, 103, 112, 130, 131, 137, 143, 144, 145, 146, 150, 151, 26, 31, 34, 45, 71, 94, 113, 115, 128, 139, 141, 142, 58, 129, 63, 102, 111, 125, 147, 148, 66, 154,157,160,181,186,199,208,212,214,229,230,232,233,241,242,246,247,248, 217];
 //var ultralist = [147, 217, 147, 196, 197, 137, 113, 149, 83, 59, 68,  65, 76, 89, 103, 130, 131, 143, 144, 145, 146, 150, 151, 3, 6, 9, 26, 45, 94, 115, 128, 139, 141, 142, 154,157,160,181,186,199,208,212,214,229,230,233,241,242,246,247,248, 201]
+//var hidden100 = [10, 11, 13, 14, 16, 17, 41, 161, 163, 165,167,177,183,190,194, 198, 220];
 
 var PokemonIcon = L.Icon.extend({
     options: {
-        //iconSize: [30, 30],
         popupAnchor: [0, -15]
     },
     createIcon: function() {
@@ -57,11 +58,10 @@ var PokestopIcon = L.Icon.extend({
     }
 });
 
-//Trash layer is not supported atm, rewrite movetolayer make trash a markerclustergroup 
+
 var markers = {};
 var overlays = {
     Pokemon: L.markerClusterGroup({ disableClusteringAtZoom: 12,spiderLegPolylineOptions: { weight: 1.5, color: '#fff', opacity: 0.5 },zoomToBoundsOnClick: false }),
-    Trash: L.layerGroup([]),
     Gyms: L.layerGroup([]),
     Pokestops: L.layerGroup([]),
     Workers: L.layerGroup([]),
@@ -84,7 +84,6 @@ function monitor (group, initial) {
 }
 
 monitor(overlays.Pokemon, false)
-monitor(overlays.Trash, true)
 monitor(overlays.Gyms, true)
 monitor(overlays.Workers, false)
 
@@ -127,7 +126,7 @@ function getOpacity (diff) {
     return 0.5 + diff / 600;
 }
 
-//var hidden100 = [10, 11, 13, 14, 16, 17, 41, 161, 163, 165,167,177,183,190,194, 198, 220];
+
 function PokemonMarker (raw) {
     /*var ivrange = 0;
     var rare = "notrare";
@@ -197,7 +196,7 @@ function PokemonMarker (raw) {
     });
     marker.setOpacity(getOpacity(marker.raw));
     marker.opacityInterval = setInterval(function () {
-        if (marker.overlay === "Hidden" || overlays[marker.overlay].hidden) {
+        if (marker.overlay === "Trash" ) {
             return;
         }
         var diff = marker.raw.expires_at - new Date().getTime() / 1000;
@@ -251,7 +250,6 @@ function addPokemonToMap (data, map) {
             return;
         }
         var marker = PokemonMarker(item);
-		//TODO add trash layer support
         if (marker.overlay == "Pokemon")
         {
             overlays.Pokemon.addLayer(marker);
@@ -327,7 +325,7 @@ function addWorkersToMap (data, map) {
 }
 
 function getPokemon () {
-    if (overlays.Pokemon.hidden && overlays.Trash.hidden) {
+    if (overlays.Pokemon.hidden) {
         return;
     }
     new Promise(function (resolve, reject) {
@@ -395,7 +393,26 @@ function getWorkers() {
     });
 }
 
-var map = L.map('main-map', {preferCanvas: true, maxZoom: 18,}).setView(_MapCoords, 12.5);
+//Coords-parsing format is url.com/?lat=1234.56&lon=9.87654&zoom=13
+var params = {};
+window.location.href.replace(/[?&]+([^=&]+)=([^&]*)/gi, function(m, key, value) {
+  params[key] = value;
+});
+
+var parsezoom = 12.5;
+if(parseFloat(params.zoom)) parsezoom = parseFloat(params.zoom);
+
+if(parseFloat(params.lat) && parseFloat(params.lon)){
+    var map = new L.Map('main-map', {
+        center: [parseFloat(params.lat), parseFloat(params.lon)], 
+        zoom: parsezoom,
+		maxZoom: 18,
+    });
+}
+else{
+    var map = L.map('main-map', {preferCanvas: true, maxZoom: 18,}).setView(_MapCoords, 12.5);
+}
+
 
 
 overlays.Pokemon.addTo(map);
@@ -407,10 +424,14 @@ overlays.Pokemon.addTo(map);
 //uncomment the layers you want to be shown by default
 //also uncomment the lines in map.whenready so that they are updated
 
-L.tileLayer(_MapProviderUrl, {
+var layer = L.tileLayer(_MapProviderUrl, {
     opacity: 0.80,
+	useCache: true,
+	crossOrigin: true,
     attribution: _MapProviderAttribution
-}).addTo(map);
+});
+layer.addTo(map);
+
 map.whenReady(function () {
     $('.my-location').on('click', function () {
         map.locate({ enableHighAccurracy: true, setView: true });
