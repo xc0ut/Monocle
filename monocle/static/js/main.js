@@ -424,12 +424,24 @@ overlays.Pokemon.addTo(map);
 //uncomment the layers you want to be shown by default
 //also uncomment the lines in map.whenready so that they are updated
 
-var layer = L.tileLayer(_MapProviderUrl, {
+//Safari checker since safari can only use 5mb of cache
+if (navigator.userAgent.indexOf('Safari') != -1 && navigator.userAgent.indexOf('Chrome') == -1) 
+{
+	var layer = L.tileLayer(_MapProviderUrl, {
     opacity: 0.80,
-	useCache: true,
-	crossOrigin: true,
+	useCache: false,
     attribution: _MapProviderAttribution
-});
+	});
+}
+else
+{
+	var layer = L.tileLayer(_MapProviderUrl, {
+		opacity: 0.80,
+		useCache: true,
+		crossOrigin: true,
+		attribution: _MapProviderAttribution
+	});
+}
 layer.addTo(map);
 
 map.whenReady(function () {
