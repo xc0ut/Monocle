@@ -425,7 +425,7 @@ overlays.Pokemon.addTo(map);
 //also uncomment the lines in map.whenready so that they are updated
 
 //Safari checker since safari can only use 5mb of cache
-if (navigator.userAgent.indexOf('Safari') != -1 && navigator.userAgent.indexOf('Chrome') == -1) 
+if (L.Browser.safari) 
 {
 	var layer = L.tileLayer(_MapProviderUrl, {
     opacity: 0.80,
