@@ -541,6 +541,7 @@ $('#settings').on('click', '.settings-panel button', function () {
     if (key.indexOf('filter-') > -1){
         // This is a pokemon's filter button
         moveToLayer(id, value);
+		setPreference(key, value);
     }else{
         setPreference(key, value);
     }
