@@ -177,8 +177,15 @@ function PokemonMarker (raw) {
     }
     
     var userPreferenceNotif = getPreference('notif-'+raw.pokemon_id);
-    if(userPreferenceNotif === 'rare'){
-        spawnNotification(raw);
+	if(localStorage.distance){
+		if(userPreferenceNotif === 'rare' && checkCoords(raw.lat,raw.lon)){
+			spawnNotification(raw);
+		}
+	}
+	else{
+		if(userPreferenceNotif === 'rare'){
+			spawnNotification(raw);
+		}
     }
     
     marker.raw = raw;
@@ -433,11 +440,13 @@ if (L.Browser.safari)
     attribution: _MapProviderAttribution
 	});
 }
+//if your mapprovider does not support cors disable cache and crossOrigin
+//the map will be grey on load if it doesnt support cors/caching
 else
 {
 	var layer = L.tileLayer(_MapProviderUrl, {
 		opacity: 0.80,
-		useCache: true,
+		useCache: true,		
 		crossOrigin: true,
 		attribution: _MapProviderAttribution
 	});
@@ -528,7 +537,7 @@ $('body').on('click', '.popup_notif_link', function () {
 $('#settings').on('click', '.settings-panel button', function () {
     //Handler for each button in every settings-panel.
     var item = $(this);
-    if (item.hasClass('active')){
+    if (item.hasClass('active') || item.has('#savebutton')){
         return;
     }
     var id = item.data('id');
@@ -600,7 +609,14 @@ function populateSettingsPanels(){
     newHtmlnotif += '</div>';
     containernotif.html(newHtmlnotif);
     
-    
+	//Distance notifications
+	
+	if(localStorage.lat && localStorage.lon && localStorage.distance){
+		$( "#lat" ).val(localStorage.lat);
+		$( "#lon" ).val(localStorage.lon);
+		$( "#distance" ).val(localStorage.distance);
+		$( "#saved" ).val('Radius active, clear the coordinates to disable');
+    }
 }
 
 
@@ -636,8 +652,7 @@ function setSettingsDefaults(){
     });
     
 }
-populateSettingsPanels();
-setSettingsDefaults();
+
 
 function getPreference(key, ret){
     return localStorage.getItem(key) ? localStorage.getItem(key) : (key in _defaultSettings ? _defaultSettings[key] : ret);
@@ -705,25 +720,106 @@ function spawnNotification(raw) {
    if (!isMobile) {
    var theIcon = '/static/monocle-icons/icons/' + raw.pokemon_id + '.png';
    var theTitle = raw.name + ' has spawned!';
-   //var theBody = raw.atk+'/'+raw.def+'/'+raw.sta +' and Expires at ' + time(raw.expires_at); 
+   //var theBody = raw.atk+'/'+raw.def+'/'+raw.sta +' and Expires at ' + time(raw.expires_at);
    var theBody = 'Expires at ' + time(raw.expires_at); 
     
   var options = {
     body: theBody,
     icon: theIcon,
   }
-  var n = new Notification(theTitle, options);
-  n.onclick = function(event) {
-    event.preventDefault(); 
-    window.focus();
-    map.panTo(new L.LatLng(raw.lat, raw.lon));  
-    n.close();
-    }
-  var userPreferenceNotif = getPreference('NOTIF_SOUND');
-    if(userPreferenceNotif === "1"){
-        audio.play();
-    }
-  
-  }
-    setTimeout(n.close.bind(n), 600000);
+	var n = new Notification(theTitle, options);
+	n.onclick = function(event) {
+		event.preventDefault(); 
+		window.focus();
+		map.panTo(new L.LatLng(raw.lat, raw.lon));  
+		n.close();
+	}
+	var userPreferenceNotif = getPreference('NOTIF_SOUND');
+	if(userPreferenceNotif === "1"){
+			audio.play();
+		}
+	  
+	  }
+		setTimeout(n.close.bind(n), 600000);
+	
 }
+
+
+//Distance notifications
+var coord;
+
+function saveCoords() {
+
+	if(parseFloat(document.getElementById('lat').value) && parseFloat(document.getElementById('lon').value) ) {
+	   localStorage.lat = parseFloat(document.getElementById('lat').value); 
+	   localStorage.lon = parseFloat(document.getElementById('lon').value); 
+	   localStorage.distance = parseFloat(document.getElementById('distance').value); 
+		$( "#saved" ).val('Radius active, clear the coordinates to disable');
+	}
+	else{
+		alert('Enter a valid lat,lon and distance');
+	}
+
+}
+
+function checkCoords(lat, lon) {
+	var coordinates = new L.LatLng(lat,lon);
+
+	if(localStorage.lat && localStorage.lon) {
+		coord = [localStorage.lat, localStorage.lon];
+
+	}
+	if(typeof coord !== 'undefined' && localStorage.distance){
+		if(coordinates.distanceTo(coord) < localStorage.distance) return true;
+		//console.log(coordinates.distanceTo(coord));
+		
+	}
+	else return false;
+}
+
+var circle;
+var circleon = false;
+
+function showCircle() {
+	if (circleon){
+		overlays.Pokemon.removeLayer(circle);
+		circleon = false;
+		
+		$("#settings").animate({
+		opacity: 0
+		}, 250, function(){ $(this).hide(); });
+	}
+	else{
+		if(localStorage.lat && localStorage.lon && localStorage.distance){
+			lat = localStorage.lat;
+			lon = localStorage.lon;
+			distance = localStorage.distance;
+			
+			circle = L.circle([lat, lon], {radius: distance});
+			overlays.Pokemon.addLayer(circle);
+			circleon = true;
+			
+			$("#settings").animate({
+			opacity: 0
+			}, 250, function(){ $(this).hide(); });
+		}
+		else{
+		alert('No circle to show');
+		}
+	}
+
+}
+
+function removeCoords() {
+	localStorage.removeItem('lat');
+	localStorage.removeItem('lon');
+	localStorage.removeItem('distance');
+	$( "#lat" ).val('');
+	$( "#lon" ).val('');
+	$( "#distance" ).val('');
+	$( "#saved" ).val('Radius off, enter lat, long and distance to activate');
+}
+
+//Populate settings and defaults
+populateSettingsPanels();
+setSettingsDefaults();

@@ -49,6 +49,24 @@
         <div class="panel panel-default settings-panel" data-panel="more">
             <div class="panel-heading">More Settings</div>
             <div class="panel-body">
+                <h5>Notification Radius</h5>
+				<div class="form-group">
+				<label for="lat">Lat:</label>
+				<input type="text" class="form-control" id="lat" placeholder="100.000000">
+				</div>
+				<div class="form-group">
+				<label for="lon">Lon: </label>
+				<input type="text" class="form-control" id="lon" placeholder="100.000000">
+				</div>
+				<div class="form-group">
+				<label for="distance">Distance(meters):</label>
+				<input type="text" class="form-control" id="distance" placeholder="500">
+				</div>
+				<button type="button" class="btn btn-primary" id="savebutton" onclick="saveCoords()">Save Coordinates</button>
+				<button type="button" class="btn btn-primary" id="savebutton" onclick="removeCoords()">Clear Coordinates</button>
+				<button type="button" class="btn btn-primary" id="savebutton circlebutton" onclick="showCircle()">Show Radius</button>
+				<div id="saved">Radius off, enter lat, long and distance to activate</div>
+				<hr />
                 <h5>Notification sound</h5>
                 <div class="btn-group" role="group" data-group="NOTIF_SOUND">
                   <button type="button" class="btn btn-default" data-value="1" >On</button>
