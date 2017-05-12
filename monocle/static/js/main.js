@@ -537,9 +537,12 @@ $('body').on('click', '.popup_notif_link', function () {
 $('#settings').on('click', '.settings-panel button', function () {
     //Handler for each button in every settings-panel.
     var item = $(this);
-    if (item.hasClass('active') || item.has('#savebutton')){
+    if (item.hasClass('active')){
         return;
     }
+	if (item.hasClass('savebutton')){
+		return;
+	}
     var id = item.data('id');
     var key = item.parent().data('group');
     var value = item.data('value');
@@ -754,7 +757,7 @@ function saveCoords() {
 	   localStorage.lat = parseFloat(document.getElementById('lat').value); 
 	   localStorage.lon = parseFloat(document.getElementById('lon').value); 
 	   localStorage.distance = parseFloat(document.getElementById('distance').value); 
-		$( "#saved" ).val('Radius active, clear the coordinates to disable');
+		$( "#saved" ).text('Radius active, clear the coordinates to disable');
 	}
 	else{
 		alert('Enter a valid lat,lon and distance');
@@ -790,6 +793,7 @@ function showCircle() {
 		}, 250, function(){ $(this).hide(); });
 	}
 	else{
+		
 		if(localStorage.lat && localStorage.lon && localStorage.distance){
 			lat = localStorage.lat;
 			lon = localStorage.lon;
@@ -804,7 +808,7 @@ function showCircle() {
 			}, 250, function(){ $(this).hide(); });
 		}
 		else{
-		alert('No circle to show');
+		saveCoords();
 		}
 	}
 
@@ -817,8 +821,14 @@ function removeCoords() {
 	$( "#lat" ).val('');
 	$( "#lon" ).val('');
 	$( "#distance" ).val('');
-	$( "#saved" ).val('Radius off, enter lat, long and distance to activate');
+	$( "#saved" ).text('Enter lat, long and distance to activate');
 }
+
+map.on("contextmenu", function (event) {
+  var clickcoord = event.latlng.toString();
+  $( "#saved" ).text(clickcoord);
+});
+
 
 //Populate settings and defaults
 populateSettingsPanels();
