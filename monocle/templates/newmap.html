@@ -34,6 +34,9 @@
     <ul class="nav nav-pills nav-justified nav-settings">
       <li class="active">
         <a href="#" data-panel="filters">Filters</a>
+      </li>      
+	  <li>
+        <a href="#" data-panel="notif">Notifications</a>
       </li>
       <li>
         <a href="#" data-panel="more">More</a>
@@ -46,12 +49,26 @@
       <div class="panel-body">
         Panel Content
       </div>
+    </div>    
+	<div class="panel panel-default settings-panel" data-panel="notif">
+      <div class="panel-heading">
+        Notification Settings(Desktop only)
+      </div>
+      <div class="panel-body">
+        Panel Content
+      </div>
     </div>
     <div class="panel panel-default settings-panel" data-panel="more">
       <div class="panel-heading">
         More Settings
       </div>
       <div class="panel-body">
+        <h5>Notification sound</h5>
+            <div class="btn-group" role="group" data-group="NOTIF_SOUND">
+                <button type="button" class="btn btn-default" data-value="1" >On</button>
+                <button type="button" class="btn btn-default" data-value="0" >Off</button>
+            </div>
+		<hr>
         <h5>Fixed markers opacity</h5>
         <div class="btn-group" role="group" data-group="FIXED_OPACITY">
           <button type="button" class="btn btn-default" data-value="1">Yes</button>

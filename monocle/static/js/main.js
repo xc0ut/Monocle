@@ -2,6 +2,7 @@ var _last_pokemon_id = 0;
 var _pokemon_count = 251;
 var _WorkerIconUrl = 'static/monocle-icons/assets/ball.png';
 var _PokestopIconUrl = 'static/monocle-icons/assets/stop.png';
+var _NotificationID = []; 
 
 var PokemonIcon = L.Icon.extend({
     options: {
@@ -97,6 +98,13 @@ function getPopupContent (item) {
     }else{
         content += '<a href="#" data-pokeid="'+item.pokemon_id+'" data-newlayer="Trash" class="popup_filter_link">Move to Trash</a>';
     }
+	content += '&nbsp; | &nbsp;';
+	var userPref = getPreference('notif-'+item.pokemon_id);
+    if (userPref == 'notify'){
+        content += '<a href="#" data-pokeid="'+item.pokemon_id+'" data-newnotif="common" class="popup_notif_link">Unnotify</a>';
+    }else{
+        content += '<a href="#" data-pokeid="'+item.pokemon_id+'" data-newnotif="notify" class="popup_notif_link">Notify</a>';
+    }
     content += '<br>=&gt; <a href="https://www.google.com/maps/?daddr='+ item.lat + ','+ item.lon +'" target="_blank" title="See in Google Maps">Get directions</a>';
     return content;
 }
@@ -130,6 +138,11 @@ function PokemonMarker (raw) {
     }else if (userPreference === 'hidden'){
         marker.overlay = 'Hidden';
     }
+	var userPreferenceNotif = getPreference('notif-'+raw.pokemon_id);
+	if(userPreferenceNotif === 'notify'){
+			spawnNotification(raw);
+	}
+    
     marker.raw = raw;
     markers[raw.id] = marker;
     marker.on('popupopen',function popupopen (event) {
@@ -414,12 +427,30 @@ $('#reset_btn').on('click', function () {
 });
 
 $('body').on('click', '.popup_filter_link', function () {
+    var oldlayer;
     var id = $(this).data("pokeid");
     var layer = $(this).data("newlayer").toLowerCase();
     moveToLayer(id, layer);
+    setPreference("filter-"+id, layer);
+    if(layer === "pokemon") oldlayer = "trash";
+    else oldlayer = "pokemon"
     var item = $("#settings button[data-id='"+id+"']");
-    item.removeClass("active").filter("[data-value='"+layer+"']").addClass("active");
+    item.filter("[data-value='"+oldlayer+"']").removeClass("active");
+    item.filter("[data-value='"+layer+"']").addClass("active");
 });
+
+$('body').on('click', '.popup_notif_link', function () {
+    var oldnotif ;
+    var id = $(this).data("pokeid");
+    var notif = $(this).data("newnotif").toLowerCase();
+	setPreference("notif-"+id, notif);
+    if(notif === "notify") oldnotif = "common";
+    else oldnotif = "notify"
+    var item = $("#settings button[data-id='"+id+"']");
+    item.filter("[data-value='"+oldnotif+"']").removeClass("active");
+    item.filter("[data-value='"+notif+"']").addClass("active");
+});
+
 
 $('#settings').on('click', '.settings-panel button', function () {
     //Handler for each button in every settings-panel.
@@ -478,6 +509,24 @@ function populateSettingsPanels(){
     }
     newHtml += '</div>';
     container.html(newHtml);
+	
+	var containernotif = $('.settings-panel[data-panel="notif"]').children('.panel-body');
+    var newHtmlnotif = '';
+    for (var i = 1; i <= _pokemon_count; i++){
+        var partHtmlnotif = `<div class="text-center">
+                <img src="static/monocle-icons/icons/`+i+`.png">
+                <div class="btn-group" role="group" data-group="notif-`+i+`">
+                  <button type="button" id="notifbutton" class="btn btn-default" data-id="`+i+`" data-value="notify">Notify On</button>
+                  <button type="button" id="notifbutton" class="btn btn-default" data-id="`+i+`" data-value="common">Notify Off</button>
+                </div>
+            </div>
+        `;
+
+        newHtmlnotif += partHtmlnotif
+    }
+    newHtmlnotif += '</div>';
+    containernotif.html(newHtmlnotif);
+	
 }
 
 function setSettingsDefaults(){
@@ -495,6 +544,22 @@ function setSettingsDefaults(){
             value = "1";
         item.children("button").removeClass("active").filter("[data-value='"+value+"']").addClass("active");
     });
+	
+	for (var i = 1; i <= _pokemon_count; i++){
+        _defaultSettings['notif-'+i] = (_NotificationID.indexOf(i) > -1) ? "notify" : "common";
+    };
+
+    $("#settings div.btn-group").each(function(){
+        var item = $(this);
+        var key = item.data('group');
+        var value = getPreference(key);
+        if (value === false)
+            value = "0";
+        else if (value === true)
+            value = "1";
+        item.children("button").removeClass("active").filter("[data-value='"+value+"']").addClass("active");
+    });
+	
 }
 populateSettingsPanels();
 setSettingsDefaults();
@@ -548,4 +613,47 @@ function updateTime() {
             $(this).css('visibility', 'hidden');
         });
     }
+}
+
+function time(s) {
+    return new Date(s * 1e3).toISOString().slice(-13, -5);
+}
+
+var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+if (!isMobile) {
+    Notification.requestPermission();
+}
+
+var audio = new Audio('/static/ding.mp3');
+function spawnNotification(raw) {
+   if (!isMobile) {
+   var theIcon = '/static/monocle-icons/icons/' + raw.pokemon_id + '.png';
+   var theTitle = raw.name + ' has spawned!';
+   if(raw.atk != undefined) {
+	   var theBody = raw.atk+'/'+raw.def+'/'+raw.sta +' and Expires at ' + time(raw.expires_at);
+   }
+   else {
+	   var theBody = 'Expires at ' + time(raw.expires_at); 
+   }
+	
+  var options = {
+    body: theBody,
+    icon: theIcon,
+  }
+	var n = new Notification(theTitle, options);
+	n.onclick = function(event) {
+		event.preventDefault(); 
+		window.focus();
+		map.panTo(new L.LatLng(raw.lat, raw.lon));  
+		n.close();
+	}
+	var userPreferenceNotif = getPreference('NOTIF_SOUND');
+	if(userPreferenceNotif === "1"){
+			audio.play();
+		}
+	  
+	  }
+		setTimeout(n.close.bind(n), 600000);
+	
 }

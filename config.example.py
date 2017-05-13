@@ -233,6 +233,7 @@ LOAD_CUSTOM_JS_FILE = False   # File path MUST be 'static/js/custom.js'
 ## Variables below will be used as default values on frontend
 FIXED_OPACITY = False  # Make marker opacity independent of remaining time
 SHOW_TIMER = False  # Show remaining time on a label under each pokemon marker
+NOTIF_SOUND = True # Play sound when playing notifications in browser
 
 ### OPTIONS BELOW THIS POINT ARE ONLY NECESSARY FOR NOTIFICATIONS ###
 NOTIFY = False  # enable notifications
