@@ -657,11 +657,13 @@ class Worker:
         except ex.InvalidRPCException as e:
             self.log.warning('{} Giving up.', e)
         except ex.ExpiredHashKeyException as e:
+            self.log.warning('{}', e)
             self.error_code = 'KEY EXPIRED'
-            err = str(e)
-            self.log.error(err)
-            print(err)
-            exit()
+            #err = str(e)
+            #self.log.error(err)
+            #print(err)
+            #exit()
+            await sleep(185, loop=LOOP)
         except (ex.MalformedResponseException, ex.UnexpectedResponseException) as e:
             self.log.warning('{} Giving up.', e)
             self.error_code = 'MALFORMED RESPONSE'
