@@ -699,6 +699,7 @@ function updateTime() {
     if (getPreference("SHOW_TIMER") === "1"){
         $(".remaining_text").each(function() {
             $(this).css('visibility', 'visible');
+            $(this).css('height', '15px');
             this.innerHTML = calculateRemainingTime($(this).data('expire'));
         });
     }else{
