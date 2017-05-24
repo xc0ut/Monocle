@@ -7,8 +7,16 @@
 #menu.sprite span {
   position: relative;
   float: left;
-  left: 90px;
+  left: 110px;
 }
+@media (max-width: 720){
+	#menu.sprite span {
+	  position: relative;
+	  float: left;
+	  left: 90px;
+	}
+}
+
 
 .sprite-1 {
     width: 30px;
