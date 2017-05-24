@@ -742,7 +742,7 @@ class Worker:
 
                 normalized = self.normalize_pokemon(pokemon)
                 pokeid = pokemon['pokemon_data']['pokemon_id']
-				print(pokeid)
+                print(pokeid)
                 if pokeid == 13: 
                     self.shadowban_seen += 1
 				
