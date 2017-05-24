@@ -122,10 +122,10 @@ class Worker:
         self.pokestops = conf.SPIN_POKESTOPS
         self.next_spin = 0
         self.handle = HandleStub()
-        try self.shadowban_seen:
-            self.shadowban_seen = 0
-        except KeyError:
+        try:self.shadowban_seen
             self.shadowban_seen = self.shadowban_seen
+        except KeyError:
+            self.shadowban_seen = 0
 
     def initialize_api(self):
         device_info = get_device_info(self.account)
