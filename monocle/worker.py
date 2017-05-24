@@ -124,7 +124,7 @@ class Worker:
         self.handle = HandleStub()
         if not self.shadowban_seen:
             self.shadowban_seen = 0
-        else
+        else:
             self.shadowban_seen = self.shadowban_seen
 
     def initialize_api(self):
