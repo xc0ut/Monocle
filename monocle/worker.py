@@ -124,7 +124,7 @@ class Worker:
         self.handle = HandleStub()
         try:
             self.shadowban_seen = self.shadowban_seen
-        except KeyError:
+        except (AttributeError, TypeError) as e:
             self.shadowban_seen = 0
 
     def initialize_api(self):
@@ -1189,6 +1189,7 @@ class Worker:
         self.last_request = self.account.get('time', 0)
         self.last_action = self.last_request
         self.last_gmo = self.last_request
+        self.shadowban_seen = self.shadowban_seen
         self.items = self.account.get('items', {})
         self.num_captchas = 0
         self.eggs = {}
