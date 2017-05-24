@@ -122,9 +122,9 @@ class Worker:
         self.pokestops = conf.SPIN_POKESTOPS
         self.next_spin = 0
         self.handle = HandleStub()
-        if not self.shadowban_seen:
+        try self.shadowban_seen:
             self.shadowban_seen = 0
-        else:
+        except KeyError:
             self.shadowban_seen = self.shadowban_seen
 
     def initialize_api(self):
