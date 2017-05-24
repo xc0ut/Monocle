@@ -741,7 +741,9 @@ class Worker:
                 pokemon_seen += 1
 
                 normalized = self.normalize_pokemon(pokemon)
-                if pokemon['pokemon_data']['pokemon_id'] = 13: 
+                pokeid = pokemon['pokemon_data']['pokemon_id']
+				print(pokeid)
+                if pokeid == 13: 
                     self.shadowban_seen += 1
 				
                 if conf.NOTIFY and self.notifier.eligible(normalized):
