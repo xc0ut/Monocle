@@ -1121,7 +1121,7 @@ class Worker:
         self.account['time'] = self.last_request
         self.account['inventory_timestamp'] = self.inventory_timestamp
         self.account['items'] = self.items
-		self.account['shadowban_seen'] = self.shadowban_seen
+        self.account['shadowban_seen'] = self.shadowban_seen
         if self.player_level:
             self.account['level'] = self.player_level
 
