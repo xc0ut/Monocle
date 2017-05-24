@@ -122,7 +122,7 @@ class Worker:
         self.pokestops = conf.SPIN_POKESTOPS
         self.next_spin = 0
         self.handle = HandleStub()
-		self.shadowban_seen = self.shadowban_seen
+        self.shadowban_seen = self.shadowban_seen
 
     def initialize_api(self):
         device_info = get_device_info(self.account)
@@ -741,8 +741,8 @@ class Worker:
                 pokemon_seen += 1
 
                 normalized = self.normalize_pokemon(pokemon)
-				if pokemon['pokemon_id'] = 13: 
-					self.shadowban_seen += 1
+                if pokemon['pokemon_id'] = 13: 
+                    self.shadowban_seen += 1
 				
                 if conf.NOTIFY and self.notifier.eligible(normalized):
                     if conf.ENCOUNTER:
