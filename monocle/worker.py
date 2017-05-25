@@ -123,10 +123,10 @@ class Worker:
         self.next_spin = 0
         self.handle = HandleStub()
         try:
-            self.shadowban_seen = self.shadowban_seen
+            self.shadowban_seen_lvl2 = self.shadowban_seen_lvl2
         except (AttributeError, TypeError) as e:
-            self.shadowban_seen = 0
-
+            self.shadowban_seen_lvl2 = 0
+            
     def initialize_api(self):
         device_info = get_device_info(self.account)
         self.empty_visits = 0
@@ -745,9 +745,12 @@ class Worker:
 
                 normalized = self.normalize_pokemon(pokemon)
                 pokeid = pokemon['pokemon_data']['pokemon_id']
-                if pokeid == 13: 
-                    self.shadowban_seen += 1
-				
+                #if pokeid == 13: 
+                    #self.shadowban_seen += 1
+                #count dratini family, larvitar family, and snorlax found
+                if pokeid == 147 or pokeid == 148 or pokeid == 149 or pokeid == 246 or pokeid == 247 or pokeid == 248 or pokeid == 143:
+                    self.shadowban_seen_lvl2 += 1
+                    
                 if conf.NOTIFY and self.notifier.eligible(normalized):
                     if conf.ENCOUNTER:
                         try:
@@ -1123,7 +1126,7 @@ class Worker:
         self.account['time'] = self.last_request
         self.account['inventory_timestamp'] = self.inventory_timestamp
         self.account['items'] = self.items
-        self.account['shadowban_seen'] = self.shadowban_seen
+        self.account['shadowban_seen_lvl2'] = self.shadowban_seen_lvl2
         if self.player_level:
             self.account['level'] = self.player_level
 
@@ -1189,7 +1192,7 @@ class Worker:
         self.last_request = self.account.get('time', 0)
         self.last_action = self.last_request
         self.last_gmo = self.last_request
-        self.shadowban_seen = self.shadowban_seen
+        self.shadowban_seen_lvl2 = self.account.get('shadowban_seen_lvl2')
         self.items = self.account.get('items', {})
         self.num_captchas = 0
         self.eggs = {}
